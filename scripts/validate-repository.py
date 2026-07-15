@@ -70,16 +70,27 @@ def validate_workflow_actions(value: Any, path: Path) -> None:
             validate_workflow_actions(child, path)
 
 
+def workflow_trigger_names(value: Any, path: Path) -> set[str]:
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, list):
+        require(all(isinstance(item, str) for item in value), f"Invalid workflow trigger list: {path}")
+        return set(value)
+    if isinstance(value, dict):
+        require(all(isinstance(item, str) for item in value), f"Invalid workflow trigger map: {path}")
+        return set(value)
+    raise ValueError(f"Workflow must declare an on trigger: {path}")
+
+
 def validate_copilot_review_gate() -> None:
     path = ROOT / ".github" / "workflows" / "copilot-review.yml"
     with path.open("r", encoding="utf-8") as handle:
         workflow = yaml.load(handle, Loader=yaml.BaseLoader)
     require(isinstance(workflow, dict), f"Invalid Copilot review workflow: {path}")
-    require("pull_request_target" not in workflow, "Copilot review gate must not use pull_request_target.")
-
     triggers = workflow.get("on")
     require(isinstance(triggers, dict), "Copilot review gate must declare explicit triggers.")
-    require(set(triggers) == {"pull_request"}, "Copilot review gate must run only for pull requests.")
+    trigger_names = workflow_trigger_names(triggers, path)
+    require(trigger_names == {"pull_request"}, "Copilot review gate must run only for pull requests.")
     pull_request = triggers["pull_request"]
     require(isinstance(pull_request, dict), "Copilot pull_request trigger must specify event types.")
     require(
@@ -260,7 +271,8 @@ def main() -> None:
         with path.open("r", encoding="utf-8") as handle:
             workflow = yaml.load(handle, Loader=yaml.BaseLoader)
         require(isinstance(workflow, dict), f"Invalid GitHub workflow: {path}")
-        require("pull_request_target" not in workflow, f"Unsafe pull_request_target trigger in {path}")
+        trigger_names = workflow_trigger_names(workflow.get("on"), path)
+        require("pull_request_target" not in trigger_names, f"Unsafe pull_request_target trigger in {path}")
         validate_workflow_actions(workflow, path)
 
     validate_copilot_review_gate()
