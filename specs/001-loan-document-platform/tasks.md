@@ -163,6 +163,17 @@
 
 ---
 
+## Phase 10: Repository Rename and Mandatory Copilot Review
+
+**Purpose**: Keep repository identity/OIDC inputs canonical and require AI review of every exact pull-request head.
+
+- [x] T068 Rename the GitHub repository and local origin to `hdduong/aws-idp-custom-platform`; update `README.md`, `config/environments/prod.example.json`, and `docs/github-delivery.md`.
+- [x] T069 Add the active automatic draft/every-push Copilot ruleset and reproduce it in `scripts/configure-github-protection.ps1`.
+- [x] T070 Add the exact-head metadata-only gate and review guidance in `.github/workflows/copilot-review.yml` and `.github/copilot-instructions.md`.
+- [x] T071 Amend `.specify/memory/constitution.md`, `CLAUDE.md`, contributor/spec guidance, and repository invariants for the review-wait-fix-re-review loop.
+
+---
+
 ## Dependencies and Execution Order
 
 - Phase 1 precedes feature changes; Phase 2 precedes every user story.

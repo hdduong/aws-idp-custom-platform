@@ -81,3 +81,11 @@ All material architecture choices are resolved for the baseline. Live account/do
 **Rationale**: Current Claude integration is skills-based (`/speckit-*`) and does not generate `CLAUDE.md`. A reviewed lock plus sync script keeps generated skills/templates/scripts aligned and reproducible on Windows.
 
 **Alternatives rejected**: Tracking upstream `main`, hand-copying templates, or adding legacy `.claude/commands` makes upgrades non-reproducible or duplicates the current integration.
+
+## Mandatory Copilot review
+
+**Decision**: Configure an active repository branch ruleset to request Copilot review for draft pull requests and every push. Require a read-only `copilot-review` workflow check that waits for a `COMMENTED` review tied to the exact current head SHA, and require all review conversations to be resolved. Agents must implement every sound constitution-compatible finding and repeat review after feedback commits.
+
+**Rationale**: Native automatic review guarantees the request, while the exact-head required check prevents an older review from being inherited by new code. Conversation resolution makes findings visible until disposition. Copilot remains advisory because it never submits an approval and can be wrong.
+
+**Alternatives rejected**: Constitution text alone cannot block an unreviewed merge. Treating any historical Copilot review as sufficient creates a stale-review race. Blindly applying every suggestion can weaken security or correctness, so rejected comments require concrete rationale instead.

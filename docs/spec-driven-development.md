@@ -26,6 +26,7 @@ Each feature lives at `specs/<number>-<short-name>/`. `.specify/feature.json` se
 5. Analyze: check requirement, design, task, and constitution coverage before implementation.
 6. Implement: execute tasks in dependency order, mark only completed and verified work as complete, and keep tests and documentation with the behavior they cover.
 7. Converge: compare the repository with the specification, plan, and task list; append concrete remaining work rather than declaring completion with unexplained gaps.
+8. Review: push the pull-request head, wait for GitHub Copilot to review that exact SHA, address every sound comment, and repeat after each feedback commit until `copilot-review` passes with no unresolved actionable thread.
 
 Optional checklists assess whether requirements are complete, clear, consistent, and testable. They validate the quality of the written requirements, not whether the implementation happens to pass tests.
 
@@ -74,10 +75,13 @@ A feature is complete when:
 - its acceptance scenarios are demonstrated by tests or a documented verification step;
 - canonical contracts and documentation match the implementation;
 - security, repository, and infrastructure validation pass;
+- Copilot has reviewed the exact current head and every actionable comment has been implemented or rejected with documented evidence;
 - the task list reflects actual completion;
 - `/speckit-converge` finds no unexplained required work.
 
 Do not commit local workflow run state, Claude local settings, credentials, or generated deployment outputs. Keep project-owned specifications and reviewed feature artifacts in version control.
+
+Copilot is an additional advisory reviewer, not an approval or security boundary. Its outage, quota failure, or timeout blocks merge until review can complete; it never authorizes bypassing tests, human judgment, or the constitution.
 
 ## Upstream references
 

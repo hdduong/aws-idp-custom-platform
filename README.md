@@ -1,6 +1,6 @@
 # Loan Document Platform
 
-[![Validate](https://github.com/hdduong/loan-document-platform/actions/workflows/validate.yml/badge.svg)](https://github.com/hdduong/loan-document-platform/actions/workflows/validate.yml)
+[![Validate](https://github.com/hdduong/aws-idp-custom-platform/actions/workflows/validate.yml/badge.svg)](https://github.com/hdduong/aws-idp-custom-platform/actions/workflows/validate.yml)
 
 Production-oriented monorepo for securely ingesting loan packages, selecting the winning Closing Disclosure, extracting its data, and preserving immutable loan/document archives.
 

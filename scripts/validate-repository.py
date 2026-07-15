@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 IDP_DIR = ROOT / "config" / "idp"
 SPEC_KIT_VERSION = "0.12.15"
 SPEC_KIT_COMMIT = "7b91c1eda46e1107a53831cd3f14f608b4b7bad0"
+GITHUB_REPOSITORY = "hdduong/aws-idp-custom-platform"
 SPEC_KIT_SKILLS = {
     "speckit-analyze",
     "speckit-checklist",
@@ -67,6 +68,47 @@ def validate_workflow_actions(value: Any, path: Path) -> None:
     elif isinstance(value, list):
         for child in value:
             validate_workflow_actions(child, path)
+
+
+def validate_copilot_review_gate() -> None:
+    path = ROOT / ".github" / "workflows" / "copilot-review.yml"
+    with path.open("r", encoding="utf-8") as handle:
+        workflow = yaml.load(handle, Loader=yaml.BaseLoader)
+    require(isinstance(workflow, dict), f"Invalid Copilot review workflow: {path}")
+    require("pull_request_target" not in workflow, "Copilot review gate must not use pull_request_target.")
+
+    triggers = workflow.get("on")
+    require(isinstance(triggers, dict), "Copilot review gate must declare explicit triggers.")
+    require(set(triggers) == {"pull_request"}, "Copilot review gate must run only for pull requests.")
+    pull_request = triggers["pull_request"]
+    require(isinstance(pull_request, dict), "Copilot pull_request trigger must specify event types.")
+    require(
+        set(pull_request.get("types", [])) == {"opened", "reopened", "synchronize", "ready_for_review"},
+        "Copilot review gate trigger types changed.",
+    )
+
+    permissions = workflow.get("permissions")
+    require(
+        permissions == {"contents": "read", "pull-requests": "read"},
+        "Copilot review gate must remain metadata-only and read-only.",
+    )
+    jobs = workflow.get("jobs")
+    require(isinstance(jobs, dict) and set(jobs) == {"copilot-review"}, "Unexpected Copilot jobs.")
+    job = jobs["copilot-review"]
+    require(job.get("timeout-minutes") == "20", "Copilot review gate timeout changed.")
+    steps = job.get("steps")
+    require(isinstance(steps, list) and len(steps) == 1, "Copilot review gate must have one metadata step.")
+    step = steps[0]
+    require("uses" not in step, "Copilot review gate must not execute a third-party action or checkout code.")
+    script = step.get("run", "")
+    for required_fragment in (
+        "copilot-pull-request-reviewer[bot]",
+        ".state == \\\"COMMENTED\\\"",
+        ".commit_id == \\\"${HEAD_SHA}\\\"",
+        "pulls/${PR_NUMBER}/reviews",
+        "exit 1",
+    ):
+        require(required_fragment in script, f"Copilot exact-head gate is missing: {required_fragment}")
 
 
 def validate_markdown_links(path: Path) -> None:
@@ -174,6 +216,7 @@ def validate_spec_kit() -> None:
         "specs/001-loan-document-platform/checklists/production-readiness.md",
         ".claude/README.md",
         ".specify/README.md",
+        ".github/copilot-instructions.md",
         "docs/spec-driven-development.md",
     ]
     unresolved_tokens = (
@@ -192,7 +235,8 @@ def validate_spec_kit() -> None:
         validate_markdown_links(path)
 
     constitution = (ROOT / ".specify" / "memory" / "constitution.md").read_text(encoding="utf-8")
-    require("**Version**: 1.0.0" in constitution, "Project constitution must declare version 1.0.0.")
+    require("**Version**: 1.1.0" in constitution, "Project constitution must declare version 1.1.0.")
+    require("Mandatory Exact-Head Copilot Review" in constitution, "Constitution lacks Copilot governance.")
 
 
 def main() -> None:
@@ -218,6 +262,29 @@ def main() -> None:
         require(isinstance(workflow, dict), f"Invalid GitHub workflow: {path}")
         require("pull_request_target" not in workflow, f"Unsafe pull_request_target trigger in {path}")
         validate_workflow_actions(workflow, path)
+
+    validate_copilot_review_gate()
+
+    environment_example = load_json(ROOT / "config" / "environments" / "prod.example.json")
+    require(
+        environment_example["repositoryName"] == GITHUB_REPOSITORY.split("/", 1)[1],
+        "Production example must use the canonical GitHub repository name.",
+    )
+    for relative_path in ("README.md", "docs/github-delivery.md"):
+        content = (ROOT / relative_path).read_text(encoding="utf-8")
+        require("hdduong/loan-document-platform" not in content, f"Old GitHub slug remains in {relative_path}")
+        require(GITHUB_REPOSITORY in content, f"Canonical GitHub repository missing from {relative_path}")
+
+    protection_script = (ROOT / "scripts" / "configure-github-protection.ps1").read_text(
+        encoding="utf-8"
+    )
+    for required_fragment in (
+        "Mandatory Copilot review",
+        "review_draft_pull_requests = $true",
+        "review_on_push = $true",
+        "contexts = @('validate', 'copilot-review')",
+    ):
+        require(required_fragment in protection_script, f"GitHub protection lacks: {required_fragment}")
 
     runtime_schema = load_json(ROOT / "contracts" / "runtime-config.schema.json")
     runtime_example = load_json(ROOT / "apps" / "web" / "public" / "runtime-config.example.json")

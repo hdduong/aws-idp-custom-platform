@@ -14,6 +14,7 @@
 - [x] CHK006 Architecture, security, runbook, GitHub delivery, UI handoff, constitution, feature artifacts, and Claude skills are documented.
 - [x] CHK007 Repository invariant, Python, OpenAPI, CloudFormation, and PowerShell syntax gates are defined.
 - [x] CHK008 Main-branch protection, required `validate` check, and production environment gate are configured in GitHub.
+- [x] CHK034 The canonical repository slug, automatic draft/every-push Copilot ruleset, exact-head review gate, and review-response governance are configured and scripted.
 
 ## Application Completion
 

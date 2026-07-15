@@ -29,7 +29,7 @@ Deliver a production-oriented AWS loan document platform with a stable business 
 | Stable identity and lifecycle semantics | PASS | Business, instance, logical document, upload, execution, and storage identities remain separate; archives are monotonic/idempotent. |
 | Privacy and zero-trust boundaries | PASS | Entra route permissions, CloudFront origin protection, direct quarantine upload, malware validation, KMS, and telemetry exclusion are explicit. |
 | Deterministic processing and provenance | PASS | Every run pins versions/checksums/config/model data; ambiguity enters `HOLD`; no model side effects are allowed. |
-| Testable, reviewable changes | PASS | Stories are independently testable and tasks identify files plus remaining live acceptance gates. |
+| Testable, reviewable changes | PASS | Stories are independently testable, tasks identify files plus remaining live acceptance gates, and exact-head Copilot review is mandatory after every push. |
 | Scripted, observable, cost-aware operations | PASS | AWS/Entra/GitHub provisioning is scripted; alarms, DLQs/reconciliation, concurrency, and budgets are part of the design. |
 
 The post-design check also passes: [research decisions](research.md), [data relationships](data-model.md), [contract authority](contracts/README.md), and [tasks](tasks.md) retain every constitutional boundary. Production completion remains blocked on the explicitly unchecked deployment/acceptance tasks, not on a waived gate.
@@ -82,7 +82,7 @@ All reads resolve current/archive ownership through DynamoDB references and exac
 
 ### 5. Delivery and operations
 
-GitHub is public source hosting, but mortgage content and deployment identity values are prohibited. Pull-request validation has no AWS permission. Production deployment uses a manually dispatched, environment-gated GitHub workflow and short-lived OIDC credentials restricted to the exact repository/environment. AWS and Entra bootstraps remain scripted and separate application runtime from deployment roles.
+GitHub is public source hosting at `hdduong/aws-idp-custom-platform`, but mortgage content and deployment identity values are prohibited. Pull-request validation has no AWS permission. A native branch ruleset requests Copilot review for drafts and every push; the required metadata-only gate accepts only a review whose commit matches the current head, while resolved-conversation protection holds actionable findings. Production deployment uses a manually dispatched, environment-gated GitHub workflow and short-lived OIDC credentials restricted to the exact repository/environment. AWS and Entra bootstraps remain scripted and separate application runtime from deployment roles.
 
 Asynchronous integrations use bounded retry, DLQs, idempotent consumers, and scheduled reconciliation. Alarms cover edge/API denial and availability, functions, queues, IDP, malware results, DynamoDB, certificates, and budget. Production acceptance requires synthetic smoke, restore, alarm, and certificate-rotation evidence.
 

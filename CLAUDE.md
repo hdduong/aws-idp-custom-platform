@@ -13,6 +13,8 @@ Read these sources before changing behavior:
 
 Use the Spec Kit skills under `.claude/skills/` for feature work. Invoke them as `/speckit-<command>`, not `/speckit.<command>`. Before implementation, make sure the active feature has a reviewed specification, plan, and task list. Treat the constitution, security controls, and existing API contract as constraints on feature artifacts; an intentional contract change must update the canonical contract and its tests in the same change. Do not hand-edit generated Spec Kit skills, scripts, or templates.
 
+For every request that changes the repository, work through a pull request and complete the mandatory Copilot loop before reporting completion: ensure `@copilot` is requested for the exact current head, wait for the review, inspect every thread, implement and test every sound constitution-compatible suggestion, and document the reason for rejecting an inapplicable or harmful suggestion. Pushes made to address feedback require another Copilot review of the new head. Do not merge or call the work complete until `validate` and `copilot-review` pass and all actionable conversations are resolved.
+
 Important invariants:
 
 - Do not conflate `loanId` with `loanInstanceId`.

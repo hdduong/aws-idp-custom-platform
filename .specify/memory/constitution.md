@@ -60,6 +60,19 @@ the `prod` environment reviewer, observable failure paths, bounded retries/DLQs,
 execution reconciliation, backups, and cost alerts. The USD 100 monthly budget
 is an alerting guardrail, not a hard service stop.
 
+### VII. Mandatory Exact-Head Copilot Review
+
+Every pull request MUST request GitHub Copilot code review, including drafts,
+and MUST request a new review after every pushed commit. Merge MUST remain
+blocked until Copilot has submitted a review for the exact current head SHA.
+All review comments MUST be evaluated: actionable comments consistent with
+this constitution MUST be implemented and verified; an inapplicable,
+incorrect, or harmful suggestion MUST be answered with concrete rationale
+before its conversation is resolved. Any resulting push restarts the
+review-wait-fix cycle. Copilot is advisory and never substitutes for automated
+validation, security review, or human judgment. Quota exhaustion, timeout, or
+service failure MUST fail closed and MUST NOT be treated as a completed review.
+
 ## Technology and Compliance Constraints
 
 - AWS workload region is `us-west-2`; CloudFront-scoped resources use the AWS
@@ -85,9 +98,13 @@ is an alerting guardrail, not a hard service stop.
    when applicable, and an honest completion state.
 4. Use `/speckit-analyze` before implementation when artifacts change, and
    `/speckit-converge` after implementation to append any remaining work.
-5. Work on a non-protected branch, open a pull request, and merge only after the
-   required `validate` check and conversations resolve.
-6. Deployment is a separate reviewed action. Passing CI does not imply that AWS
+5. Work on a non-protected branch and open a pull request. Ensure Copilot is
+   requested for the exact head SHA, wait for its review, address every sound
+   comment, push fixes, and repeat until the latest head is reviewed with no
+   unresolved actionable feedback.
+6. Merge only after the required `validate` and `copilot-review` checks pass and
+   every review conversation is resolved.
+7. Deployment is a separate reviewed action. Passing CI does not imply that AWS
    or Entra resources have been provisioned or operationally accepted.
 
 ## Governance
@@ -100,4 +117,4 @@ Every plan MUST include a constitution check, and every review MUST reject
 unjustified violations. `CLAUDE.md` supplies agent-specific operating context
 but cannot weaken this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-14 | **Last Amended**: 2026-07-14
+**Version**: 1.1.0 | **Ratified**: 2026-07-14 | **Last Amended**: 2026-07-14
