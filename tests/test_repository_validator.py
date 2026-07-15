@@ -35,3 +35,43 @@ def test_workflow_trigger_names_rejects_invalid_values(value: object) -> None:
 
     with pytest.raises(ValueError):
         validator.workflow_trigger_names(value, Path("workflow.yml"))
+
+
+def test_markdown_links_must_resolve_inside_repository(tmp_path: Path, monkeypatch) -> None:
+    validator = load_validator()
+    repository = tmp_path / "repository"
+    docs = repository / "docs"
+    docs.mkdir(parents=True)
+    (repository / "README.md").write_text("# Repository\n", encoding="utf-8")
+    outside = tmp_path / "outside.md"
+    outside.write_text("# Outside\n", encoding="utf-8")
+    markdown = docs / "guide.md"
+    monkeypatch.setattr(validator, "ROOT", repository)
+
+    markdown.write_text("[valid](../README.md)\n", encoding="utf-8")
+    validator.validate_markdown_links(markdown)
+
+    markdown.write_text("[escape](../../outside.md)\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="escapes the repository"):
+        validator.validate_markdown_links(markdown)
+
+    markdown.write_text(f"[absolute]({outside.as_posix()})\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Absolute Markdown link"):
+        validator.validate_markdown_links(markdown)
+
+
+def test_active_feature_path_can_change_within_specs(tmp_path: Path, monkeypatch) -> None:
+    validator = load_validator()
+    repository = tmp_path / "repository"
+    feature = repository / "specs" / "002-next-feature"
+    feature.mkdir(parents=True)
+    for name in ("spec.md", "plan.md", "tasks.md"):
+        (feature / name).write_text(f"# {name}\n", encoding="utf-8")
+    monkeypatch.setattr(validator, "ROOT", repository)
+
+    resolved = validator.resolve_repository_path(
+        repository, "specs/002-next-feature", "active feature path"
+    )
+
+    assert resolved == feature.resolve()
+    assert resolved.is_relative_to((repository / "specs").resolve())

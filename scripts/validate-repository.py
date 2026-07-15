@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 import yaml
@@ -82,6 +82,17 @@ def workflow_trigger_names(value: Any, path: Path) -> set[str]:
     raise ValueError(f"Workflow must declare an on trigger: {path}")
 
 
+def resolve_repository_path(base: Path, target: str, label: str) -> Path:
+    require(not PurePosixPath(target).is_absolute(), f"Absolute {label}: {target}")
+    require(not PureWindowsPath(target).is_absolute(), f"Absolute {label}: {target}")
+    resolved = (base / target).resolve()
+    try:
+        resolved.relative_to(ROOT.resolve())
+    except ValueError as error:
+        raise ValueError(f"{label.capitalize()} escapes the repository: {target}") from error
+    return resolved
+
+
 def validate_copilot_review_gate() -> None:
     path = ROOT / ".github" / "workflows" / "copilot-review.yml"
     with path.open("r", encoding="utf-8") as handle:
@@ -129,8 +140,9 @@ def validate_markdown_links(path: Path) -> None:
         if not target or target.startswith(("#", "http://", "https://", "mailto:")):
             continue
         relative_target = target.split("#", 1)[0].replace("%20", " ")
+        resolved_target = resolve_repository_path(path.parent, relative_target, "Markdown link")
         require(
-            (path.parent / relative_target).resolve().exists(),
+            resolved_target.exists(),
             f"Broken local Markdown link in {path}: {target}",
         )
 
@@ -152,10 +164,19 @@ def validate_spec_kit() -> None:
     require(init_options["script"] == "ps", "Generated scripts must remain PowerShell.")
 
     active_feature = load_json(ROOT / ".specify" / "feature.json")
+    active_feature_path = active_feature.get("feature_directory")
+    require(isinstance(active_feature_path, str) and active_feature_path, "Active feature path is missing.")
+    active_feature_dir = resolve_repository_path(ROOT, active_feature_path, "active feature path")
     require(
-        active_feature["feature_directory"] == "specs/001-loan-document-platform",
-        "The checked-in active feature must point to the brownfield baseline.",
+        active_feature_dir.is_relative_to((ROOT / "specs").resolve()),
+        "The active feature must remain under specs/.",
     )
+    require(active_feature_dir.is_dir(), f"Active feature directory is missing: {active_feature_path}")
+    for required_name in ("spec.md", "plan.md", "tasks.md"):
+        require(
+            (active_feature_dir / required_name).is_file(),
+            f"Active feature is missing {required_name}: {active_feature_path}",
+        )
 
     shared_assets = [
         ".specify/integration.json",
@@ -246,7 +267,10 @@ def validate_spec_kit() -> None:
         validate_markdown_links(path)
 
     constitution = (ROOT / ".specify" / "memory" / "constitution.md").read_text(encoding="utf-8")
-    require("**Version**: 1.1.0" in constitution, "Project constitution must declare version 1.1.0.")
+    version_match = re.search(r"\*\*Version\*\*: (\d+)\.(\d+)\.(\d+)", constitution)
+    require(version_match is not None, "Project constitution must declare a semantic version.")
+    constitution_version = tuple(int(part) for part in version_match.groups())
+    require(constitution_version >= (1, 1, 0), "Project constitution predates mandatory Copilot review.")
     require("Mandatory Exact-Head Copilot Review" in constitution, "Constitution lacks Copilot governance.")
 
 
