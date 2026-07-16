@@ -185,16 +185,18 @@ def test_azure_control_plane_rejects_an_aws_public_api(tmp_path: Path, monkeypat
         "scripts/deploy-all.ps1": "deploy-azure.ps1 deploy-platform.ps1",
         "scripts/deploy-web.ps1": "az staticwebapp deploy",
         "scripts/cutover-api-domain.ps1": "azure.api.imageScan",
+        "scripts/install-trivy.ps1": (
+            "$version = '0.72.0'\n"
+            "$expectedSha256 = 'bbb64b9695866ce4a7a8f5c9592002c5961cab378577fa3f8a040df362b9b2ea'\n"
+            "github.com/aquasecurity/trivy/releases/download/v$version/$assetName\n"
+            "Get-FileHash -LiteralPath $archivePath -Algorithm SHA256\n"
+        ),
         "scripts/provision-entra-federation.ps1": "# provision",
         ".github/workflows/deploy-prod.yml": (
-            "aquasecurity/setup-trivy@"
-            "81e514348e19b6112ce2a7e3ecbafe19c1e1f567\n"
-            "version: v0.72.0\n"
+            "run: ./scripts/install-trivy.ps1\n"
         ),
         ".github/workflows/validate.yml": (
-            "aquasecurity/setup-trivy@"
-            "81e514348e19b6112ce2a7e3ecbafe19c1e1f567\n"
-            "version: v0.72.0\n"
+            "run: ./scripts/install-trivy.ps1\n"
             "trivy image --scanners vuln --severity HIGH,CRITICAL "
             "--ignore-unfixed --exit-code 1 image\n"
             "trivy image --format cyclonedx image\n"

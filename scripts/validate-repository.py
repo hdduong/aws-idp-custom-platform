@@ -484,20 +484,34 @@ def validate_azure_control_plane() -> None:
         require(required_fragment in deploy_azure, f"Exact-image production gate lacks: {required_fragment}")
     cutover = (ROOT / "scripts" / "cutover-api-domain.ps1").read_text(encoding="utf-8")
     require("azure.api.imageScan" in cutover, "API DNS cutover must verify exact-image scan evidence.")
+    trivy_installer = (ROOT / "scripts" / "install-trivy.ps1").read_text(encoding="utf-8")
+    for required_fragment in (
+        "$version = '0.72.0'",
+        "$expectedSha256 = 'bbb64b9695866ce4a7a8f5c9592002c5961cab378577fa3f8a040df362b9b2ea'",
+        "github.com/aquasecurity/trivy/releases/download/v$version/$assetName",
+        "Get-FileHash -LiteralPath $archivePath -Algorithm SHA256",
+    ):
+        require(required_fragment in trivy_installer, f"Trivy installer pin lacks: {required_fragment}")
     production_workflow = (ROOT / ".github" / "workflows" / "deploy-prod.yml").read_text(encoding="utf-8")
     for required_fragment in (
-        "aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567",
-        "version: v0.72.0",
+        "run: ./scripts/install-trivy.ps1",
     ):
         require(required_fragment in production_workflow, f"Production scanner pin lacks: {required_fragment}")
+    require(
+        "aquasecurity/setup-trivy@" not in production_workflow,
+        "Production workflow uses an action outside the repository's selected-action allowlist.",
+    )
     validation_workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(encoding="utf-8")
     for required_fragment in (
-        "aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567",
-        "version: v0.72.0",
+        "run: ./scripts/install-trivy.ps1",
         "trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1",
         "trivy image --format cyclonedx",
     ):
         require(required_fragment in validation_workflow, f"Pull-request image gate lacks: {required_fragment}")
+    require(
+        "aquasecurity/setup-trivy@" not in validation_workflow,
+        "Validation workflow uses an action outside the repository's selected-action allowlist.",
+    )
 
 
 def validate_markdown_links(path: Path) -> None:
