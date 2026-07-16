@@ -85,6 +85,16 @@ def test_powershell_environment_config_requires_canonical_api_hostname(
     assert "lowercase without a trailing dot" in completed.stderr
 
 
+def test_powershell_environment_config_requires_lowercase_acr_name(tmp_path: Path) -> None:
+    values = environment_config()
+    values["azureContainerRegistryName"] = "LoanPlatformProd123"
+
+    completed = read_environment_config(tmp_path, values)
+
+    assert completed.returncode != 0
+    assert "lowercase alphanumeric Azure Container Registry name" in completed.stderr
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [

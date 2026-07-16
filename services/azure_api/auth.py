@@ -96,7 +96,7 @@ def bearer_token(authorization: str | None) -> str:
 
 def _claim_values(value: Any) -> frozenset[str]:
     if isinstance(value, list):
-        return frozenset(str(item) for item in value if str(item))
+        return frozenset(item.strip() for item in value if isinstance(item, str) and item.strip())
     if isinstance(value, str):
         return frozenset(item for item in re.split(r"[\s,]+", value.strip()) if item)
     return frozenset()

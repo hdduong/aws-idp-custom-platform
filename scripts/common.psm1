@@ -59,8 +59,8 @@ function Read-EnvironmentConfig {
     if ([string]$config.azureLocation -notmatch '^[a-z0-9]+$') {
         throw "Environment file '$resolved' contains an invalid Azure location."
     }
-    if ([string]$config.azureContainerRegistryName -notmatch '^[A-Za-z0-9]{5,50}$') {
-        throw "Environment file '$resolved' requires a 5-50 character alphanumeric Azure Container Registry name."
+    if ([string]$config.azureContainerRegistryName -cnotmatch '^[a-z0-9]{5,50}$') {
+        throw "Environment file '$resolved' requires a 5-50 character lowercase alphanumeric Azure Container Registry name."
     }
     if ([string]$config.uiHostName -eq [string]$config.apiHostName) {
         throw "Environment file '$resolved' requires distinct UI and API hostnames."

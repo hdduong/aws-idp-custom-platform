@@ -171,7 +171,7 @@ def test_routes_map_to_exact_permissions(method: str, path: str, permission: str
 
 def test_bearer_and_claim_parsing_reject_malformed_values() -> None:
     assert bearer_token("bEaReR abc.def") == "abc.def"
-    assert _claim_values(["A", "", "B"]) == frozenset({"A", "B"})
+    assert _claim_values([" A ", "", None, 7, {}, "B"]) == frozenset({"A", "B"})
     assert _claim_values("A, B C") == frozenset({"A", "B", "C"})
     assert _claim_values(42) == frozenset()
     for header in (None, "", "Basic abc", "Bearer", "Bearer one two"):
