@@ -10,7 +10,12 @@ PRODUCTION_ROOT = PurePosixPath("services")
 
 
 def normalized_path(value: str) -> PurePosixPath:
-    return PurePosixPath(value.replace("\\", "/"))
+    path = PurePosixPath(value.replace("\\", "/"))
+    try:
+        production_index = path.parts.index(PRODUCTION_ROOT.name)
+    except ValueError:
+        return path
+    return PurePosixPath(*path.parts[production_index:])
 
 
 def line_percentage(summary: dict[str, Any]) -> float:

@@ -41,6 +41,23 @@ def test_coverage_gate_requires_eighty_percent_for_every_service_file() -> None:
         gate.validate_report(report)
 
 
+@pytest.mark.parametrize(
+    "absolute_path",
+    [
+        "/home/runner/work/platform/platform/services/azure_api/main.py",
+        r"D:\a\platform\platform\services\azure_api\main.py",
+    ],
+)
+def test_coverage_gate_normalizes_absolute_service_paths(absolute_path: str) -> None:
+    gate = load_gate()
+    report = {
+        "files": {absolute_path: {"summary": summary(8, 10)}},
+        "totals": summary(8, 10),
+    }
+
+    assert gate.validate_report(report) == [("services/azure_api/main.py", 80.0)]
+
+
 def test_coverage_gate_rejects_missing_production_measurements() -> None:
     gate = load_gate()
 
