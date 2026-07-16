@@ -92,7 +92,7 @@ def test_powershell_environment_config_requires_lowercase_acr_name(tmp_path: Pat
     completed = read_environment_config(tmp_path, values)
 
     assert completed.returncode != 0
-    assert "lowercase alphanumeric Azure Container Registry name" in completed.stderr
+    assert "lowercase alphanumeric Azure Container Registry" in completed.stderr
 
 
 @pytest.mark.parametrize(
