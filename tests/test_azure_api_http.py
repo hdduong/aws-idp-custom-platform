@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import parse_qsl
 
 import pytest
+from fastapi import Response
 from fastapi.testclient import TestClient
 from test_azure_api_settings import SPA_CLIENT_ID, TENANT_ID, environment
 
@@ -512,9 +513,12 @@ def test_production_product_routes_require_custom_host_but_default_host_keeps_he
     assert domain.events == []
 
 
-def test_readiness_fails_closed_when_live_federation_cannot_be_proven() -> None:
+def test_readiness_fails_closed_when_live_federation_cannot_be_proven(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     federation = Federation(FederationError("AWS_STS_UNAVAILABLE", "must not leak"))
     test_client, _, _, _ = client(federation=federation)
+    caplog.set_level(logging.ERROR, logger="services.azure_api.main")
 
     with test_client:
         response = test_client.get("/ready")
@@ -523,6 +527,8 @@ def test_readiness_fails_closed_when_live_federation_cannot_be_proven() -> None:
     assert response.json() == {"status": "not_ready"}
     assert federation.minimums == [0]
     assert "must not leak" not in response.text
+    assert "runtime_readiness_failed error_type=FederationError" in caplog.text
+    assert "must not leak" not in caplog.text
 
 
 def test_cors_allows_only_configured_origin_and_known_route() -> None:
@@ -641,11 +647,18 @@ def test_dependency_failures_are_sanitized(caplog: pytest.LogCaptureFixture) -> 
     assert "must not leak" not in caplog.text
 
 
-def test_async_and_encoded_domain_responses_are_supported() -> None:
+@pytest.mark.parametrize(
+    "bare_result",
+    [{"accepted": True}, ["accepted"]],
+    ids=["mapping", "list"],
+)
+def test_async_bare_json_value_is_rejected_and_valid_domain_responses_are_supported(
+    bare_result: object,
+) -> None:
     class AsyncDomain(Domain):
-        async def dispatch_request(self, event: dict[str, Any]) -> dict[str, Any]:
+        async def dispatch_request(self, event: dict[str, Any]) -> object:
             self.events.append(event)
-            return {"accepted": True}
+            return bare_result
 
     encoded = base64.b64encode(b"pdf-bytes").decode()
     first, _, _, _ = client(domain=AsyncDomain())
@@ -659,14 +672,23 @@ def test_async_and_encoded_domain_responses_are_supported() -> None:
             }
         )
     )
+    third, _, _, _ = client(
+        domain=Domain(Response(status_code=202, content=b"native-response"))
+    )
 
-    with first, second:
+    with first, second, third:
         async_response = first.get("/v1/loans/23051", headers={"authorization": "Bearer token"})
         binary_response = second.get("/v1/loans/23051", headers={"authorization": "Bearer token"})
+        native_response = third.get("/v1/loans/23051", headers={"authorization": "Bearer token"})
 
-    assert async_response.json() == {"accepted": True}
+    assert async_response.status_code == 502
+    assert async_response.json()["code"] == "DOMAIN_RESPONSE_INVALID"
+    assert async_response.json()["detail"] == "The domain service returned an invalid response"
+    assert "accepted" not in async_response.text
     assert binary_response.content == b"pdf-bytes"
     assert binary_response.headers["content-type"] == "application/pdf"
+    assert native_response.status_code == 202
+    assert native_response.content == b"native-response"
 
 
 @pytest.mark.parametrize("malformed_body", ["not-base64!", "\N{SNOWMAN}", None, {"not": "base64"}])

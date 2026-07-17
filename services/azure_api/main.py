@@ -164,9 +164,7 @@ def _domain_response(result: Any) -> Response:
     if isinstance(result, Response):
         return result
     if not isinstance(result, Mapping) or "statusCode" not in result:
-        if isinstance(result, (dict, list)):
-            return JSONResponse(content=result)
-        raise DomainAdapterError("The loan domain returned an unsupported response")
+        raise DomainResponseError("The loan domain returned an unsupported response")
 
     status = int(result["statusCode"])
     headers = {
@@ -283,8 +281,8 @@ def create_app(
             # a revision is considered ready. Normal probes reuse the provider's
             # cached credentials; credential values are never logged or returned.
             await run_in_threadpool(runtime.federation.session_context, 0)
-        except Exception:
-            LOGGER.error("runtime_readiness_failed")
+        except Exception as exc:
+            LOGGER.error("runtime_readiness_failed error_type=%s", type(exc).__name__)
             return JSONResponse(status_code=503, content={"status": "not_ready"})
         return JSONResponse(content={"status": "ready"})
 
