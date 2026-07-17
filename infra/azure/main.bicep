@@ -50,9 +50,10 @@ param apiMinReplicas int = 1
 @maxValue(300)
 param apiMaxReplicas int = 10
 
-@description('Concurrent HTTP requests per replica before scale-out.')
-@minValue(1)
-@maxValue(1000)
+@description('HTTP scale-out target pinned to 1 while domain calls are serialized. This scaling signal is not a hard request-admission cap.')
+@allowed([
+  1
+])
 param concurrentRequestsPerReplica int = 1
 
 @description('Log Analytics retention in days.')

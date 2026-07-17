@@ -81,8 +81,8 @@ function Read-EnvironmentConfig {
     $maximumReplicas = [int]$config.azureApiMaxReplicas
     $concurrentRequests = [int]$config.azureApiConcurrentRequestsPerReplica
     if ($minimumReplicas -lt 1 -or $maximumReplicas -lt $minimumReplicas -or
-        $maximumReplicas -gt 300 -or $concurrentRequests -lt 1 -or $concurrentRequests -gt 1000) {
-        throw "Environment file '$resolved' requires 1 <= azureApiMinReplicas <= azureApiMaxReplicas <= 300 and 1 <= azureApiConcurrentRequestsPerReplica <= 1000."
+        $maximumReplicas -gt 300 -or $concurrentRequests -ne 1) {
+        throw "Environment file '$resolved' requires 1 <= azureApiMinReplicas <= azureApiMaxReplicas <= 300 and azureApiConcurrentRequestsPerReplica = 1 while domain calls are serialized."
     }
     if ([string]$config.azureContainerRegistrySku -notin @('Basic', 'Standard', 'Premium')) {
         throw "Environment file '$resolved' contains an unsupported Azure Container Registry SKU."

@@ -11,6 +11,9 @@ can exist only after deployment.
   Cognito backend user, or optional Jobs REST dependency exists.
 - [x] Entra user/app authorization, certificate-only app token enforcement,
   exact client allowlist, and route scope/role checks fail closed before AWS.
+- [x] The module-global AWS domain seam is serialized per replica, the HTTP
+  scale target is pinned to `1` as a scale-out signal rather than an admission
+  cap, and bounded `apiMaxReplicas` still permits horizontal scale.
 - [x] Production `/v1` routes enforce the configured custom API host, the
   provider FQDN is limited to `/health` and `/ready`, production SPA publication
   requires recorded API DNS cutover, and Uvicorn request-line access logs are

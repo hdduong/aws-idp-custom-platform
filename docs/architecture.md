@@ -253,7 +253,16 @@ Upgrades first run synthetic/regression packages and compare accuracy, selection
 latency, and cost. Production never follows upstream `main`.
 
 - Container Apps uses health/readiness probes, immutable revisions, bounded
-  autoscaling, and rollback to a previously accepted image.
+  autoscaling, and rollback to a previously accepted image. The current loan
+  domain retains module-global AWS clients, so a per-replica `domain_lock`
+  serializes credential acquisition, client binding, and every domain dispatch
+  as the correctness boundary. The HTTP scale-out target is pinned to `1` to
+  minimize head-of-line waiting while `apiMaxReplicas` preserves horizontal
+  scale. Azure treats that target as an autoscaling signal, not a hard request-
+  admission or concurrency cap; requests may still queue at a replica and must
+  still pass through the lock. Raising the target or removing the lock requires
+  first replacing module-global clients with a re-entrant, request-scoped domain
+  seam and repeating concurrency/load acceptance.
 - Managed-identity and STS credentials are memory-only, single-flight refreshed,
   and never persisted in Azure configuration, Key Vault, DynamoDB, or logs.
 - The loan domain constructs no AWS clients during import. The Azure credential

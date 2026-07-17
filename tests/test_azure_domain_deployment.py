@@ -95,24 +95,34 @@ def test_powershell_environment_config_requires_lowercase_acr_name(tmp_path: Pat
     assert "lowercase alphanumeric Azure Container Registry" in completed.stderr
 
 
-@pytest.mark.parametrize(
-    ("field", "value"),
-    [
-        ("azureApiMaxReplicas", 301),
-        ("azureApiConcurrentRequestsPerReplica", 1001),
-    ],
-)
-def test_powershell_scaling_error_names_every_enforced_bound(
-    tmp_path: Path, field: str, value: int
-) -> None:
+def test_powershell_scaling_rejects_replica_count_above_azure_limit(tmp_path: Path) -> None:
     values = environment_config()
-    values[field] = value
+    values["azureApiMaxReplicas"] = 301
 
     completed = read_environment_config(tmp_path, values)
 
     assert completed.returncode != 0
     assert "azureApiMaxReplicas <= 300" in completed.stderr
-    assert "azureApiConcurrentRequestsPerReplica <= 1000" in completed.stderr
+
+
+@pytest.mark.parametrize("value", [0, 2, 1000])
+def test_powershell_scaling_pins_http_target_to_one(tmp_path: Path, value: int) -> None:
+    values = environment_config()
+    values["azureApiConcurrentRequestsPerReplica"] = value
+
+    completed = read_environment_config(tmp_path, values)
+
+    assert completed.returncode != 0
+    assert "azureApiConcurrentRequestsPerReplica = 1" in completed.stderr
+
+
+def test_bicep_pins_http_scale_target_without_removing_horizontal_scale() -> None:
+    bicep = (ROOT / "infra" / "azure" / "main.bicep").read_text(encoding="utf-8")
+
+    assert "@allowed([\n  1\n])\nparam concurrentRequestsPerReplica int = 1" in bicep
+    assert "concurrentRequests: string(concurrentRequestsPerReplica)" in bicep
+    assert "maxReplicas: apiMaxReplicas" in bicep
+    assert "not a hard request-admission cap" in bicep
 
 
 def test_bicep_and_runtime_share_the_strict_environment_enum() -> None:

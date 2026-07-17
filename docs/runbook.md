@@ -230,6 +230,12 @@ Permanent active/active Azure and AWS public APIs are prohibited.
   production localhost or provider-default redirect URI. Production `/v1`
   rejects the provider hostname; only `/health` and `/ready` remain available
   there for deployment probes.
+- `azureApiConcurrentRequestsPerReplica` remains exactly `1`; configuration and
+  Bicep reject any other value while the module-global AWS domain seam is
+  protected by `domain_lock`. This HTTP threshold prompts earlier scale-out and
+  minimizes head-of-line waiting, but it is not a hard admission cap. Confirm
+  queued-request latency and replica growth under synthetic load, retain the
+  reviewed `azureApiMaxReplicas`, and rely on the lock for serialization.
 - Synthetic smoke-test spend is bounded. The configured AWS and Azure USD budget
   notifications are active; budgets alert after cost is recorded and are not a
   hard spending stop.
@@ -243,6 +249,9 @@ environment. Pull requests and fork validation receive no production cloud role.
 
 Inspect Container Apps revision health, readiness, replica count, recent rollout,
 resource limits, dependencies, and sanitized Application Insights telemetry.
+The HTTP concurrency target of `1` is only a scale-out signal; it does not prove
+that a replica admitted at most one request. Inspect head-of-line latency at the
+serialized domain lock together with replica growth and the configured maximum.
 Route traffic only to an already accepted immutable revision. Do not enable the
 former AWS public API while Azure still accepts mutations.
 

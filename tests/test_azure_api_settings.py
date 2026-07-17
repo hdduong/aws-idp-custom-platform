@@ -100,8 +100,8 @@ def test_origins_normalize_default_ports_and_preserve_non_default_ports() -> Non
         {
             "ENVIRONMENT_NAME": "dev",
             "ALLOWED_ORIGINS": (
-                "https://LOANS.example.com:443,https://loans.example.com,"
-                "http://localhost:80,"
+                "https://LOANS.example.com.:443,https://loans.example.com,"
+                "http://localhost.:80,"
                 "http://localhost:5173,https://api.example.com:8443"
             ),
         }
@@ -114,6 +114,28 @@ def test_origins_normalize_default_ports_and_preserve_non_default_ports() -> Non
         "http://localhost",
         "http://localhost:5173",
         "https://api.example.com:8443",
+    )
+
+
+def test_origins_preserve_ipv6_brackets_and_port_semantics() -> None:
+    values = environment()
+    values.update(
+        {
+            "ENVIRONMENT_NAME": "dev",
+            "ALLOWED_ORIGINS": (
+                "http://[::1]:80,http://[::1]:5173,"
+                "https://[2001:db8::1]:443,https://[2001:db8::1]:8443"
+            ),
+        }
+    )
+
+    settings = Settings.from_env(values)
+
+    assert settings.allowed_origins == (
+        "http://[::1]",
+        "http://[::1]:5173",
+        "https://[2001:db8::1]",
+        "https://[2001:db8::1]:8443",
     )
 
 
@@ -156,6 +178,7 @@ def test_api_hostname_must_be_an_exact_dns_name(hostname: str) -> None:
         ({"ALLOWED_ORIGINS": "https://:443"}, "origins without paths"),
         ({"ALLOWED_ORIGINS": "https://[::1"}, "invalid hostname"),
         ({"ALLOWED_ORIGINS": "https://example.com:not-a-port"}, "invalid port"),
+        ({"ALLOWED_ORIGINS": "https://example.com.."}, "origins without paths"),
         ({"ALLOWED_ORIGINS": "http://example.com"}, "must use HTTPS"),
         ({"ALLOWED_ORIGINS": "https://*.example.com"}, "origins without paths"),
         ({"REQUIRE_USER_ROLES": "false"}, "cannot be disabled in production"),

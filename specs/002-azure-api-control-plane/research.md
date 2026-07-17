@@ -189,6 +189,36 @@ beyond those credentials.
 - **Refresh only after `ExpiredToken`**: Rejected because a request or presigned
   grant can cross the expiration boundary and create ambiguous failures.
 
+## Initial domain concurrency boundary
+
+**Decision**: Keep the retained domain's module-global AWS clients behind one
+`domain_lock` per single-worker Container Apps replica. The lock covers workload
+session acquisition, client rebinding, and the entire domain dispatch. Pin the
+HTTP `concurrentRequests` scale target to `1`, reject any other environment
+value, and retain an independently configurable `apiMaxReplicas` for horizontal
+scale.
+
+**Rationale**: Client rebinding mutates process-global state, so concurrent
+domain calls could otherwise use the wrong workload session. The lock is the
+correctness boundary. Azure documents `concurrentRequests` as the HTTP threshold
+that causes Container Apps to add replicas up to `maxReplicas`; it is a scaling
+signal, not a hard request-admission limit. A target of `1` therefore encourages
+earlier scale-out and minimizes head-of-line waiting, but requests can still
+arrive at and queue within one replica. Synthetic load acceptance must observe
+both lock wait latency and replica growth. See
+[Scaling in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/scale-app).
+
+**Alternatives considered**:
+
+- **Treat the HTTP scale target as a concurrency cap**: Rejected because scaling
+  is metric-driven and asynchronous; it cannot protect module-global state.
+- **Raise the target while retaining the lock**: Rejected because it increases
+  predictable head-of-line waiting without increasing useful per-replica domain
+  throughput.
+- **Remove the lock now**: Rejected until the domain seam is re-entrant and owns
+  request-scoped repositories/clients. That refactor requires new concurrency
+  and load acceptance before the scale target can change.
+
 ## Headless IDP integration
 
 **Decision**: Keep the public dispatch entry point provider-neutral while

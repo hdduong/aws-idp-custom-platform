@@ -314,8 +314,11 @@ def create_app(
                 runtime.settings.max_grant_seconds + runtime.settings.aws_credential_refresh_seconds
             )
             # The domain keeps host-bound boto3 clients in module globals. Keep
-            # configure + dispatch atomic within this single-worker process until
-            # those clients move behind request-scoped repository instances.
+            # session acquisition, configure, and dispatch atomic within this
+            # single-worker replica until those clients move behind request-scoped
+            # repository instances. Container Apps scales out with an HTTP target
+            # of 1 to minimize head-of-line waiting, but that metric is not a hard
+            # admission cap; this lock remains the correctness boundary.
             async with runtime.domain_lock:
                 # Acquire after entering the lock so time spent waiting behind a
                 # prior dispatch cannot consume the presigned-grant safety window.

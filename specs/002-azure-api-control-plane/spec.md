@@ -81,6 +81,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 - An Azure request is cancelled or times out after an AWS mutation succeeds; an idempotent retry must recover the committed result.
 - Temporary AWS credentials expire while a request is active; refresh must be synchronized and a returned upload/download grant must never outlive its effective credential policy.
 - Multiple Azure API replicas allocate or archive the same logical record concurrently; conditional persistence must produce one winner and a deterministic conflict/replay result.
+- More than one request reaches a replica while the HTTP scale-out rule is reacting; the per-replica domain lock must serialize the module-global AWS client seam because the scale target is not an admission-control cap.
 - The client-complete call and malware event arrive in either order or more than once; reconciliation must advance only after both facts apply to the same exact object version.
 - AWS IDP, registry, or object storage is unavailable; Azure returns a sanitized dependency error and does not fabricate success.
 - An upstream IDP object key, workflow ARN, or job identifier differs from the platform `documentId` or `processingExecutionId`; mappings remain explicit and are never substituted.
@@ -115,6 +116,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 - **FR-022**: Upstream unavailability, invalid federation, scan uncertainty, configuration mismatch, and ambiguous classification MUST fail closed with sanitized, retry-safe outcomes.
 - **FR-023**: Data-point editing or replacement by product callers is outside this migration; adding it requires a separate audited, versioned, idempotent contract rather than treating a stock IDP mutation as a product API.
 - **FR-024**: Production `/v1` routes MUST accept only the configured custom API host; the Container Apps provider hostname MAY expose only `/health` and `/ready` for deployment probes, and production SPA publication MUST require recorded custom-domain binding and DNS cutover.
+- **FR-025**: While the retained domain uses module-global AWS clients, each single-worker Azure API replica MUST serialize workload-session acquisition, client binding, and domain dispatch; its HTTP scale target MUST remain exactly `1` to minimize head-of-line waiting without treating that scaling signal as a hard admission cap, and horizontal scale MUST remain bounded by the configured maximum replicas.
 
 ### Key Entities
 
