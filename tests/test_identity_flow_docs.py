@@ -63,9 +63,13 @@ def test_flow_html_has_complete_accessible_offline_structure(path: Path) -> None
 
     for href in parser.links:
         parsed = urlsplit(href)
-        if parsed.scheme or parsed.netloc or href.startswith("#"):
+        if href.startswith("#"):
             continue
-        target = (path.parent / parsed.path).resolve()
+        assert not parsed.scheme and not parsed.netloc, f"Remote link in {path}: {href}"
+        link_path = Path(parsed.path)
+        assert not link_path.is_absolute(), f"Absolute link in {path}: {href}"
+        target = (path.parent / link_path).resolve()
+        assert target.is_relative_to(ROOT.resolve()), f"Link escapes repository in {path}: {href}"
         assert target.is_file(), f"Broken local link in {path}: {href}"
 
 
