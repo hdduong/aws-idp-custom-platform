@@ -174,13 +174,14 @@ class JwtValidator:
 
         scopes = _claim_values(claims.get("scp"))
         roles = _permission_roles(claims.get("roles"))
+        required_role_value = f"{required_permission_name}{_APPLICATION_ROLE_SUFFIX}"
         if scopes:
             if claims.get("idtyp") == "app":
                 raise AuthProblem(403, "TOKEN_TYPE_NOT_ALLOWED", "An app-only token cannot use delegated scopes")
             if required_permission_name not in scopes:
                 raise AuthProblem(403, "SCOPE_REQUIRED", f"Required delegated scope: {required_permission_name}")
             if self._settings.require_user_roles and required_permission_name not in roles:
-                raise AuthProblem(403, "ROLE_REQUIRED", f"Required assigned app role: {required_permission_name}")
+                raise AuthProblem(403, "ROLE_REQUIRED", f"Required assigned app role: {required_role_value}")
             actor_type = "user"
         else:
             if claims.get("idtyp") != "app":
@@ -192,7 +193,7 @@ class JwtValidator:
                     "Application callers must authenticate with a certificate",
                 )
             if required_permission_name not in roles:
-                raise AuthProblem(403, "ROLE_REQUIRED", f"Required application role: {required_permission_name}")
+                raise AuthProblem(403, "ROLE_REQUIRED", f"Required application role: {required_role_value}")
             actor_type = "servicePrincipal"
 
         return Principal(

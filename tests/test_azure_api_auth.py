@@ -95,6 +95,10 @@ def test_valid_application_token_uses_appid_and_application_role() -> None:
     assert principal.safe_claims()["idtyp"] == "app"
     assert "scp" not in principal.safe_claims()
 
+    with pytest.raises(AuthProblem) as raised:
+        service_validator.validate(token(payload | {"roles": ["Loan.Read"]}), "Loan.Read")
+    assert raised.value.detail == "Required application role: Loan.Read.Role"
+
 
 @pytest.mark.parametrize(
     ("payload_change", "permission", "expected"),
@@ -149,6 +153,14 @@ def test_roles_can_be_optional_for_delegated_callers() -> None:
     optional = JwtValidator(Settings.from_env(values), signing_key_resolver=lambda _token: PUBLIC_KEY)
 
     assert optional.validate(token(claims(roles=[])), "Loan.Read").actor_type == "user"
+
+
+def test_role_failure_names_the_external_entra_role_value() -> None:
+    with pytest.raises(AuthProblem) as raised:
+        validator().validate(token(claims(roles=["Loan.Read"])), "Loan.Read")
+
+    assert raised.value.code == "ROLE_REQUIRED"
+    assert raised.value.detail == "Required assigned app role: Loan.Read.Role"
 
 
 @pytest.mark.parametrize(
