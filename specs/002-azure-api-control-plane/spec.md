@@ -76,6 +76,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 3. **Given** a token with the wrong tenant, issuer, audience, or subject, **When** it is presented to AWS federation, **Then** role assumption fails.
 4. **Given** a pull request or production deployment, **When** automation runs, **Then** validation uses no production document data and cloud deployment uses repository- and environment-restricted workload federation.
 5. **Given** Azure CLI is installed through the Windows MSI `az.cmd` wrapper, **When** a provisioning script sends a Graph query URI or JSON body containing command-shell metacharacters, **Then** the script bypasses `cmd.exe`, preserves every argument exactly, and fails closed if the safe Azure CLI engine cannot be resolved.
+6. **Given** a new Entra application has no existing delegated scopes or application roles, **When** provisioning initializes its permissions, **Then** the empty collections are accepted and every required permission receives a stable generated identifier.
 
 ### Edge Cases
 

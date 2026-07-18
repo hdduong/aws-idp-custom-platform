@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import subprocess
+import uuid
 from pathlib import Path
 
 import pytest
@@ -234,6 +235,31 @@ def test_custom_role_rest_call_uses_safe_azure_cli_launcher() -> None:
     assert "Invoke-AzureCli -Arguments @(" in source
     assert "Failed to create or update the custom Azure deployment role." in source
     assert "& az rest" not in source
+
+
+def test_permission_id_helper_accepts_empty_collection_and_reuses_existing_id() -> None:
+    entra_script = ROOT / "scripts" / "provision-entra.ps1"
+    module_path = str(entra_script).replace("'", "''")
+    existing_id = "22222222-2222-2222-2222-222222222222"
+    script = (
+        "$tokens = $null; $errors = $null; "
+        f"$ast = [System.Management.Automation.Language.Parser]::ParseFile('{module_path}', "
+        "[ref]$tokens, [ref]$errors); "
+        "$definition = $ast.Find({ param($node) "
+        "$node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and "
+        "$node.Name -eq 'Get-OrCreatePermissionId' }, $true); "
+        "Invoke-Expression $definition.Extent.Text; "
+        "$generated = Get-OrCreatePermissionId -Existing @() -Value 'Loan.Read'; "
+        f"$existing = @([pscustomobject]@{{ value = 'Loan.Read'; id = '{existing_id}' }}); "
+        "$reused = Get-OrCreatePermissionId -Existing $existing -Value 'Loan.Read'; "
+        "$result = [pscustomobject]@{ Generated = $generated; Reused = $reused }; "
+        "[Console]::Out.Write(($result | ConvertTo-Json -Compress))"
+    )
+
+    result = json.loads(run_powershell(script, environment=os.environ.copy()))
+
+    assert str(uuid.UUID(result["Generated"])) == result["Generated"]
+    assert result["Reused"] == existing_id
 
 
 @pytest.mark.parametrize(

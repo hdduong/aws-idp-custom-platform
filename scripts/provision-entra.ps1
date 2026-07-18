@@ -95,7 +95,7 @@ function Ensure-ServicePrincipal {
 
 function Get-OrCreatePermissionId {
     param(
-        [Parameter(Mandatory)][object[]]$Existing,
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Existing,
         [Parameter(Mandatory)][string]$Value
     )
     $match = $Existing | Where-Object { $_.value -eq $Value } | Select-Object -First 1

@@ -165,6 +165,8 @@ description: "Implementation tasks for moving the product API to Azure while ret
 
 - [x] T051 [P] [US4] Add cross-platform regression tests for literal Azure CLI arguments and Windows `az.cmd` launch resolution in `tests/test_powershell_deployment_helpers.py`
 - [x] T052 [US4] Add the shared safe Azure CLI launcher in `scripts/common.psm1`, route Entra Graph and Azure role REST calls through it, and document the Windows MSI behavior in `specs/002-azure-api-control-plane/quickstart.md`
+- [x] T053 [P] [US4] Add a PowerShell helper regression proving a new Entra application accepts an empty existing-permission collection in `tests/test_powershell_deployment_helpers.py`
+- [x] T054 [US4] Permit empty existing delegated-scope and application-role collections in `scripts/provision-entra.ps1` without weakening idempotent identifier reuse
 
 ---
 
