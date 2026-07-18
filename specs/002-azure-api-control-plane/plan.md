@@ -88,6 +88,8 @@ Add `infra/azure/main.bicep` for the resource group deployment: user-assigned ru
 
 PowerShell automation routes Azure CLI calls that carry Graph query strings or JSON bodies through a shared launcher. On Windows MSI installations the launcher resolves the Python engine used by `az.cmd` and invokes `azure.cli` directly, preventing `cmd.exe` from interpreting `&`, `$`, quotes, or JSON punctuation. Other installations invoke the resolved native `az` application with the same argument array. Resolution failure stops provisioning before any identity mutation.
 
+Clean-tenant Entra provisioning treats absent delegated-scope and application-role collections as valid empty inputs, generates identifiers for the complete reviewed permission set, and retains existing identifiers on idempotent reruns. The helper-level regression invokes the extracted PowerShell function with an empty collection so parser-only tests cannot conceal a parameter-binding failure.
+
 ## Project Structure
 
 ### Documentation (this feature)
