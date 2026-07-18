@@ -7,6 +7,7 @@ from typing import Any
 
 import jwt
 import pytest
+import yaml
 from cryptography.hazmat.primitives.asymmetric import rsa
 from test_azure_api_settings import API_CLIENT_ID, SPA_CLIENT_ID, TENANT_ID, environment
 
@@ -42,7 +43,7 @@ def claims(**overrides: Any) -> dict[str, Any]:
         "nbf": now - 5,
         "exp": now + 300,
         "scp": "Loan.Read Document.Read",
-        "roles": ["Loan.Read", "Document.Read"],
+        "roles": ["Loan.Read.Role", "Document.Read.Role"],
     }
     values.update(overrides)
     return values
@@ -85,7 +86,7 @@ def test_valid_application_token_uses_appid_and_application_role() -> None:
     service_settings = Settings.from_env(values)
     service_validator = JwtValidator(service_settings, signing_key_resolver=lambda _token: PUBLIC_KEY)
     payload = claims(
-        azp="", appid=app_client, scp=None, idtyp="app", azpacr="2", roles=["Loan.Read"]
+        azp="", appid=app_client, scp=None, idtyp="app", azpacr="2", roles=["Loan.Read.Role"]
     )
 
     principal = service_validator.validate(token(payload), "Loan.Read")
@@ -102,16 +103,18 @@ def test_valid_application_token_uses_appid_and_application_role() -> None:
         ({"azp": "77777777-7777-4777-8777-777777777777"}, "Loan.Read", "CLIENT_NOT_ALLOWED"),
         ({"azp": "55555555-5555-4555-8555-555555555555"}, "Loan.Read", "CLIENT_NOT_ALLOWED"),
         ({"scp": "Document.Read"}, "Loan.Read", "SCOPE_REQUIRED"),
-        ({"roles": ["Document.Read"]}, "Loan.Read", "ROLE_REQUIRED"),
+        ({"roles": ["Document.Read.Role"]}, "Loan.Read", "ROLE_REQUIRED"),
+        ({"roles": ["Loan.Read"]}, "Loan.Read", "ROLE_REQUIRED"),
+        ({"roles": ["Loan.Read.Other"]}, "Loan.Read", "ROLE_REQUIRED"),
         ({"idtyp": "app"}, "Loan.Read", "TOKEN_TYPE_NOT_ALLOWED"),
         ({"scp": None, "idtyp": "user"}, "Loan.Read", "TOKEN_TYPE_NOT_ALLOWED"),
         (
-            {"scp": None, "idtyp": "app", "azpacr": "2", "roles": ["Document.Read"]},
+            {"scp": None, "idtyp": "app", "azpacr": "2", "roles": ["Document.Read.Role"]},
             "Loan.Read",
             "ROLE_REQUIRED",
         ),
         (
-            {"scp": None, "idtyp": "app", "roles": ["Loan.Read"]},
+            {"scp": None, "idtyp": "app", "roles": ["Loan.Read.Role"]},
             "Loan.Read",
             "CERTIFICATE_AUTH_REQUIRED",
         ),
@@ -176,3 +179,10 @@ def test_bearer_and_claim_parsing_reject_malformed_values() -> None:
     assert _claim_values(42) == frozenset()
     for header in (None, "", "Basic abc", "Bearer", "Bearer one two"):
         assert problem_code(lambda header=header: bearer_token(header)) == "TOKEN_REQUIRED"
+
+
+def test_openapi_declares_the_external_application_role_suffix() -> None:
+    contract_path = Path(__file__).resolve().parents[1] / "contracts" / "openapi" / "loan-api.yaml"
+    contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
+
+    assert contract["components"]["securitySchemes"]["entraOAuth"]["x-application-role-suffix"] == ".Role"

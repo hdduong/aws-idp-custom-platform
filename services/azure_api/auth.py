@@ -102,6 +102,19 @@ def _claim_values(value: Any) -> frozenset[str]:
     return frozenset()
 
 
+_APPLICATION_ROLE_SUFFIX = ".Role"
+
+
+def _permission_roles(value: Any) -> frozenset[str]:
+    """Normalize collision-free Entra app-role values to domain permissions."""
+
+    return frozenset(
+        role[: -len(_APPLICATION_ROLE_SUFFIX)]
+        for role in _claim_values(value)
+        if role.endswith(_APPLICATION_ROLE_SUFFIX) and role != _APPLICATION_ROLE_SUFFIX
+    )
+
+
 class JwtValidator:
     """Validate Entra JWTs and enforce the platform's route authorization rules."""
 
@@ -160,7 +173,7 @@ class JwtValidator:
             raise AuthProblem(403, "ACTOR_REQUIRED", "The token has no immutable actor identifier")
 
         scopes = _claim_values(claims.get("scp"))
-        roles = _claim_values(claims.get("roles"))
+        roles = _permission_roles(claims.get("roles"))
         if scopes:
             if claims.get("idtyp") == "app":
                 raise AuthProblem(403, "TOKEN_TYPE_NOT_ALLOWED", "An app-only token cannot use delegated scopes")
