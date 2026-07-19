@@ -197,6 +197,7 @@ description: "Implementation tasks for moving the product API to Azure while ret
 - [x] T061 [US4] Set the authorized registry table and source bucket names in `infra/api/template.yaml`, then grant only the active Backup handler actions and exact Backup service-linked-role creation in `infra/bootstrap/template.yaml`
 - [x] T062 [US4] Parse and enforce the complete cross-template CloudFormation handler contract in `scripts/validate-repository.py`
 - [x] T063 [US4] Reject global DynamoDB/S3 resource grants and standalone role-policy attachments, and preserve the stateful replacement gate for pre-existing generated resources
+- [x] T064 [US4] Scope the stale cfn-lint Backup mount catalog exception to W3037 on the platform execution role and enforce that exact exception in repository validation
 
 ---
 

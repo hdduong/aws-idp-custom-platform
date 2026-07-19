@@ -202,6 +202,12 @@ Resources:
 
   PlatformCloudFormationExecutionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn-lint:
+        config:
+          # The active BackupVault provider schema requires Mount; cfn-lint 1.53 does not catalog it.
+          ignore_checks:
+            - W3037
     Properties:
       RoleName: !Sub 'loan-document-${EnvironmentName}-platform-cfn'
       AssumeRolePolicyDocument:

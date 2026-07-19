@@ -443,12 +443,30 @@ def validate_platform_cloudformation_handler_contract(
     platform_properties = (
         platform_role.get("Properties") if isinstance(platform_role, dict) else None
     )
+    platform_metadata = (
+        platform_role.get("Metadata") if isinstance(platform_role, dict) else None
+    )
+    cfn_lint_metadata = (
+        platform_metadata.get("cfn-lint")
+        if isinstance(platform_metadata, dict)
+        else None
+    )
+    cfn_lint_config = (
+        cfn_lint_metadata.get("config")
+        if isinstance(cfn_lint_metadata, dict)
+        else None
+    )
     require(
         isinstance(platform_role, dict)
         and platform_role.get("Type") == "AWS::IAM::Role"
         and isinstance(platform_properties, dict)
         and not platform_properties.get("ManagedPolicyArns"),
         "Platform CloudFormation execution role must remain an inline-policy IAM role.",
+    )
+    require(
+        isinstance(cfn_lint_config, dict)
+        and cfn_lint_config.get("ignore_checks") == ["W3037"],
+        "Platform CloudFormation may suppress only the stale W3037 Backup mount catalog warning.",
     )
     platform_statements = _inline_role_statements(platform_role)
 

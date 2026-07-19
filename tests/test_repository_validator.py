@@ -78,6 +78,11 @@ def bootstrap_transform_template(
 Resources:
   PlatformCloudFormationExecutionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W3037
     Properties:
       Policies:
         - PolicyName: PlatformCloudFormation
@@ -212,6 +217,10 @@ def test_platform_cloudformation_handler_contract_is_exact() -> None:
                 "PlatformCloudFormationExecutionRole:\n    Type: AWS::IAM::Policy",
                 1,
             ),
+        ),
+        (
+            platform_api_handler_template(),
+            bootstrap_transform_template().replace("- W3037", "- W3037\n            - E3001", 1),
         ),
         (
             platform_api_handler_template(),
@@ -422,7 +431,7 @@ def test_platform_cloudformation_handler_contract_rejects_mutations(
         ValueError,
         match=(
             "handler|service-linked|deterministic|authorized|execution role|"
-            "inline role definitions"
+            "inline role definitions|suppress"
         ),
     ):
         validator.validate_platform_cloudformation_handler_contract(
