@@ -85,10 +85,14 @@ def test_normalized_text_sha256_preserves_a_utf8_bom_as_significant(
 
 
 def test_idp_scripts_share_the_normalized_digest_helper() -> None:
+    common = COMMON_MODULE.read_text(encoding="utf-8")
     deploy = (ROOT / "scripts" / "deploy-idp.ps1").read_text(encoding="utf-8")
     generator = (ROOT / "scripts" / "new-screen-config.ps1").read_text(encoding="utf-8")
     module_import = "Import-Module (Join-Path $PSScriptRoot 'common.psm1') -Force"
 
+    assert "[System.Security.Cryptography.SHA256]::Create()" in common
+    assert "[System.Security.Cryptography.SHA256]::HashData" not in common
+    assert "[System.Convert]::ToHexString" not in common
     assert module_import in deploy
     assert "$actual = Get-NormalizedTextSha256 -Path $entry.Path" in deploy
     assert "Get-FileHash -Algorithm SHA256 -LiteralPath $entry.Path" not in deploy

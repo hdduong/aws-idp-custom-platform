@@ -17,8 +17,13 @@ function Get-NormalizedTextSha256 {
         throw "Reviewed text file '$resolved' must contain valid UTF-8."
     }
     $normalized = $text.Replace("`r`n", "`n").Replace("`r", "`n")
-    $digest = [System.Security.Cryptography.SHA256]::HashData($strictUtf8.GetBytes($normalized))
-    return [System.Convert]::ToHexString($digest).ToLowerInvariant()
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $algorithm.ComputeHash($strictUtf8.GetBytes($normalized))
+    } finally {
+        $algorithm.Dispose()
+    }
+    return ([System.BitConverter]::ToString($digest)).Replace('-', '').ToLowerInvariant()
 }
 
 function Read-EnvironmentConfig {
