@@ -19,6 +19,7 @@ Parameters:
     Type: String
     Default: prod
     AllowedPattern: '[a-z0-9-]+'
+    MaxLength: 13
   PlatformStackName:
     Type: String
     AllowedPattern: '[A-Za-z][-A-Za-z0-9]*'
@@ -201,6 +202,12 @@ Resources:
 
   PlatformCloudFormationExecutionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn-lint:
+        config:
+          # The active BackupVault provider schema requires Mount; cfn-lint 1.53 does not catalog it.
+          ignore_checks:
+            - W3037
     Properties:
       RoleName: !Sub 'loan-document-${EnvironmentName}-platform-cfn'
       AssumeRolePolicyDocument:
@@ -290,6 +297,13 @@ Resources:
                 Action:
                   - backup:*
                   - guardduty:*
+                Resource: '*'
+              - Sid: MountEncryptedBackupVault
+                Effect: Allow
+                Action:
+                  # Required by the active AWS::Backup::BackupVault create-handler schema.
+                  - backup-storage:Mount
+                  - backup-storage:MountCapsule
                 Resource: '*'
               - Sid: ExactCostBudget
                 Effect: Allow
@@ -385,6 +399,13 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:AWSServiceName: guardduty.amazonaws.com
+              - Sid: BackupServiceLinkedRole
+                Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/backup.amazonaws.com/AWSServiceRoleForBackup'
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: backup.amazonaws.com
       Tags:
         - Key: Application
           Value: loan-document-platform
