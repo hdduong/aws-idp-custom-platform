@@ -212,6 +212,16 @@ description: "Implementation tasks for moving the product API to Azure while ret
 
 ---
 
+## Phase 13: Lambda Event-Filter Deployment Contract
+
+**Purpose**: Reject invalid or broadened DynamoDB stream filters before Lambda create-handler execution.
+
+- [x] T069 [P] [US4] Add malformed-delimiter, duplicate-key, non-object, and semantic-drift filter regressions in `tests/test_repository_validator.py`
+- [x] T070 [US4] Correct the upload-completion filter JSON and structurally enforce every Lambda filter plus the exact reviewed upload mapping in `infra/api/template.yaml` and `scripts/validate-repository.py`
+- [x] T071 [US4] Record the filter grammar, exact event contract, and measurable deployment gate in the active Spec Kit artifacts and quickstart
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

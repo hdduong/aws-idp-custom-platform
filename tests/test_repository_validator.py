@@ -9,6 +9,21 @@ TRANSFORM_ARN = (
     "arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:"
     "transform/Serverless-2016-10-31"
 )
+VALID_UPLOAD_FILTER = (
+    '{"eventName":["INSERT","MODIFY"],"dynamodb":{"NewImage":'
+    '{"entityType":{"S":["UPLOAD"]},"status":{"S":["VALIDATING"]}}}}'
+)
+
+
+def platform_event_filter_template(pattern: str = VALID_UPLOAD_FILTER) -> str:
+    return f"""Resources:
+  UploadCompletionStreamMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FilterCriteria:
+        Filters:
+          - Pattern: '{pattern}'
+"""
 
 
 def platform_api_handler_template(
@@ -37,6 +52,12 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub '{table_name}'
+  UploadCompletionStreamMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FilterCriteria:
+        Filters:
+          - Pattern: '{VALID_UPLOAD_FILTER}'
 """
 
 
@@ -233,6 +254,75 @@ def test_platform_cloudformation_handler_contract_is_exact() -> None:
     validator.validate_platform_cloudformation_handler_contract(
         platform_api_handler_template(), bootstrap_transform_template()
     )
+
+
+def test_platform_event_source_filter_contract_is_exact() -> None:
+    validator = load_validator()
+
+    validator.validate_platform_event_source_filters(platform_event_filter_template())
+
+
+@pytest.mark.parametrize(
+    ("pattern", "message"),
+    [
+        (VALID_UPLOAD_FILTER + "}", "valid JSON with unique object keys"),
+        (VALID_UPLOAD_FILTER[:-1], "valid JSON with unique object keys"),
+        (
+            VALID_UPLOAD_FILTER.replace(
+                '"eventName":["INSERT","MODIFY"]',
+                '"eventName":["INSERT"],"eventName":["MODIFY"]',
+            ),
+            "valid JSON with unique object keys",
+        ),
+        (
+            VALID_UPLOAD_FILTER.replace('"VALIDATING"', '"PROCESSING"'),
+            "exact INSERT/MODIFY UPLOAD VALIDATING filter",
+        ),
+        (
+            VALID_UPLOAD_FILTER.replace('"INSERT","MODIFY"', '"INSERT","MODIFY","REMOVE"'),
+            "exact INSERT/MODIFY UPLOAD VALIDATING filter",
+        ),
+        ("[]", "decode to a JSON object"),
+    ],
+)
+def test_platform_event_source_filter_contract_rejects_invalid_or_drifted_patterns(
+    pattern: str, message: str
+) -> None:
+    validator = load_validator()
+
+    with pytest.raises(ValueError, match=message):
+        validator.validate_platform_event_source_filters(
+            platform_event_filter_template(pattern)
+        )
+
+
+def test_platform_event_source_filter_contract_rejects_added_or_filter() -> None:
+    validator = load_validator()
+    template = platform_event_filter_template().replace(
+        f"          - Pattern: '{VALID_UPLOAD_FILTER}'",
+        f"          - Pattern: '{VALID_UPLOAD_FILTER}'\n"
+        f"          - Pattern: '{VALID_UPLOAD_FILTER}'",
+    )
+
+    with pytest.raises(ValueError, match="exact INSERT/MODIFY UPLOAD VALIDATING filter"):
+        validator.validate_platform_event_source_filters(template)
+
+
+@pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
+def test_platform_event_source_filter_contract_rejects_nonstandard_json_constants(
+    constant: str,
+) -> None:
+    validator = load_validator()
+    template = platform_event_filter_template() + f"""  SecondaryStreamMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FilterCriteria:
+        Filters:
+          - Pattern: '{{"value":[{constant}]}}'
+"""
+
+    with pytest.raises(ValueError, match="valid JSON with unique object keys"):
+        validator.validate_platform_event_source_filters(template)
 
 
 def test_platform_packaging_contract_is_exact() -> None:
@@ -1116,8 +1206,11 @@ def test_azure_control_plane_rejects_an_aws_public_api(tmp_path: Path, monkeypat
 
 
 def test_upload_completion_stream_mapping_is_durable_and_bounded() -> None:
+    validator = load_validator()
     repository = Path(__file__).resolve().parents[1]
     template = (repository / "infra" / "api" / "template.yaml").read_text(encoding="utf-8")
+
+    validator.validate_platform_event_source_filters(template)
 
     for required_fragment in (
         "StreamViewType: NEW_AND_OLD_IMAGES",
