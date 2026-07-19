@@ -241,7 +241,7 @@ $tenantId = $azureIdentity.TenantId
 Assert-ExistingValueMatches -Config $config -Name 'azureSubscriptionId' -Expected $subscriptionId.ToString() -Comparison Guid
 Assert-ExistingValueMatches -Config $config -Name 'entraTenantId' -Expected $tenantId.ToString() -Comparison Guid
 
-$selectedProfile = $AwsProfile.Trim()
+$selectedProfile = ([string]$AwsProfile).Trim()
 if ([string]::IsNullOrWhiteSpace($selectedProfile) -and (Test-ConfiguredValue -Value $config.awsProfile)) {
     $selectedProfile = [string]$config.awsProfile
 }
@@ -273,7 +273,7 @@ $publicZones = @(
 )
 if ($publicZones.Count -eq 0) { throw 'No public Route 53 hosted zone exists in the authenticated AWS account.' }
 
-$selectedZoneId = $HostedZoneId.Trim() -replace '^/hostedzone/', ''
+$selectedZoneId = ([string]$HostedZoneId).Trim() -replace '^/hostedzone/', ''
 if ([string]::IsNullOrWhiteSpace($selectedZoneId) -and
     (Test-ConfiguredValue -Value $config.route53HostedZoneId)) {
     $selectedZoneId = ([string]$config.route53HostedZoneId) -replace '^/hostedzone/', ''
@@ -288,7 +288,7 @@ if (-not [string]::IsNullOrWhiteSpace($selectedZoneId)) {
 } elseif ($NonInteractive) {
     throw 'NonInteractive mode requires -HostedZoneId when more than one public zone exists.'
 } else {
-    $selectedZoneId = (Read-Host 'Route 53 hosted-zone ID' -MaskInput).Trim() -replace '^/hostedzone/', ''
+    $selectedZoneId = ([string](Read-Host 'Route 53 hosted-zone ID' -MaskInput)).Trim() -replace '^/hostedzone/', ''
     $matches = @($publicZones | Where-Object { (([string]$_.Id) -replace '^/hostedzone/', '') -ceq $selectedZoneId })
     if ($matches.Count -ne 1) { throw 'The supplied hosted-zone ID does not identify exactly one public Route 53 zone.' }
     $zone = $matches[0]
@@ -314,7 +314,7 @@ $defaultApiHost = if ((Test-ConfiguredValue -Value $config.apiHostName) -and
     "api-$environmentName.$domainName"
 }
 
-$selectedUiHost = $UiHostName.Trim()
+$selectedUiHost = ([string]$UiHostName).Trim()
 if ([string]::IsNullOrWhiteSpace($selectedUiHost)) {
     if ($NonInteractive -or (Test-ConfiguredValue -Value $config.uiHostName)) {
         $selectedUiHost = $defaultUiHost
@@ -323,7 +323,7 @@ if ([string]::IsNullOrWhiteSpace($selectedUiHost)) {
         if ([string]::IsNullOrWhiteSpace($selectedUiHost)) { $selectedUiHost = $defaultUiHost }
     }
 }
-$selectedApiHost = $ApiHostName.Trim()
+$selectedApiHost = ([string]$ApiHostName).Trim()
 if ([string]::IsNullOrWhiteSpace($selectedApiHost)) {
     if ($NonInteractive -or (Test-ConfiguredValue -Value $config.apiHostName)) {
         $selectedApiHost = $defaultApiHost
@@ -357,7 +357,7 @@ if ([string]::IsNullOrWhiteSpace($selectedBudgetEmail) -and (Test-ConfiguredValu
 if ([string]::IsNullOrWhiteSpace($selectedBudgetEmail)) { $selectedBudgetEmail = $selectedAlertEmail }
 Assert-ValidEmailAddress -Value $selectedBudgetEmail -Name 'BudgetEmail'
 
-$registryName = $AzureContainerRegistryName.Trim()
+$registryName = ([string]$AzureContainerRegistryName).Trim()
 if ([string]::IsNullOrWhiteSpace($registryName) -and
     (Test-ConfiguredValue -Value $config.azureContainerRegistryName)) {
     $registryName = [string]$config.azureContainerRegistryName

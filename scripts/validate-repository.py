@@ -1940,6 +1940,11 @@ def validate_environment_configuration_script(
         "Read-Host 'UI hostname (leave blank for the deterministic default)' -MaskInput",
         "Read-Host 'API hostname (leave blank for the deterministic default)' -MaskInput",
         "Cloud identifiers, contacts, profile names, and the complete configuration were not displayed.",
+        "([string]$AwsProfile).Trim()",
+        "([string]$HostedZoneId).Trim()",
+        "([string]$UiHostName).Trim()",
+        "([string]$ApiHostName).Trim()",
+        "([string]$AzureContainerRegistryName).Trim()",
     )
     for fragment in required_fragments:
         require(
@@ -1956,6 +1961,11 @@ def validate_environment_configuration_script(
         'Read-Host "API hostname [$defaultApiHost]"',
         "$selectedAlertEmail = $AlertEmail.Trim()",
         "$selectedBudgetEmail = $BudgetEmail.Trim()",
+        "$AwsProfile.Trim()",
+        "$HostedZoneId.Trim()",
+        "$UiHostName.Trim()",
+        "$ApiHostName.Trim()",
+        "$AzureContainerRegistryName.Trim()",
     ):
         require(
             forbidden_fragment not in configurator,

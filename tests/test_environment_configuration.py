@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -16,6 +17,7 @@ from cryptography.x509.oid import NameOID
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "configure-environment.ps1"
 COMMON_MODULE = ROOT / "scripts" / "common.psm1"
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 def valid_environment() -> dict[str, object]:
@@ -51,6 +53,16 @@ def run_pwsh(command: str, environment: dict[str, str]) -> subprocess.CompletedP
         text=True,
         env=environment,
     )
+
+
+def normalized_powershell_error(value: str) -> str:
+    return " ".join(ANSI_ESCAPE.sub("", value).split())
+
+
+def test_normalized_powershell_error_removes_hosted_ansi_and_line_wrapping() -> None:
+    value = "\x1b[31;1mmust keep the AWS data plane in\x1b[0m\n\x1b[31;1mus-west-2.\x1b[0m"
+
+    assert normalized_powershell_error(value) == "must keep the AWS data plane in us-west-2."
 
 
 def write_test_certificate_bundle(path: Path) -> None:
@@ -117,6 +129,15 @@ def test_configure_environment_has_fail_closed_repository_contract() -> None:
     assert "Write-Host \"AWS identity:" not in source
     assert "$publicZones[$index].Name" not in source
     assert 'Read-Host "UI hostname [$defaultUiHost]"' not in source
+    for parameter in (
+        "AwsProfile",
+        "HostedZoneId",
+        "UiHostName",
+        "ApiHostName",
+        "AzureContainerRegistryName",
+    ):
+        assert f"([string]${parameter}).Trim()" in source
+        assert f"${parameter}.Trim()" not in source
     for variable in ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "AWS_CA_BUNDLE"):
         assert f"$env:{variable} = $caPath" in bootstrap
     assert source.count("Set-Variable -Name PSNativeCommandUseErrorActionPreference") == 4
@@ -336,7 +357,9 @@ def test_atomic_writer_leaves_original_unchanged_when_validation_fails(tmp_path:
     completed = run_pwsh(command, environment)
 
     assert completed.returncode != 0
-    assert "must keep the AWS data plane in us-west-2" in completed.stderr
+    assert "must keep the AWS data plane in us-west-2" in normalized_powershell_error(
+        completed.stderr
+    )
     assert destination.read_bytes() == original
     assert list(tmp_path.glob(".environment.json.*.json")) == []
 
@@ -447,6 +470,30 @@ def test_noninteractive_configuration_is_idempotent_and_redacts_identifiers(
         rerun = json.loads(environment_path.read_text(encoding="utf-8"))
         assert rerun["azureContainerRegistryName"] == first_registry
 
+        null_parameter_command = (
+            "& $env:TEST_CONFIGURATOR "
+            "-EnvironmentFile $env:TEST_ENVIRONMENT_FILE "
+            "-CorporateCaBundlePath $env:TEST_CA_BUNDLE "
+            "-AwsProfile $null -HostedZoneId $null -UiHostName $null "
+            "-ApiHostName $null -AzureContainerRegistryName $null "
+            "-NonInteractive"
+        )
+        null_parameter_environment = {
+            **environment,
+            "TEST_CONFIGURATOR": str(SCRIPT),
+            "TEST_ENVIRONMENT_FILE": str(environment_path),
+            "TEST_CA_BUNDLE": str(bundle),
+        }
+        null_parameters = subprocess.run(
+            ["pwsh", "-NoLogo", "-NoProfile", "-Command", null_parameter_command],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=null_parameter_environment,
+        )
+        assert null_parameters.returncode == 0, null_parameters.stderr
+        assert json.loads(environment_path.read_text(encoding="utf-8")) == rerun
+
         what_if = subprocess.run(
             [*arguments, "-WhatIf"],
             check=False,
@@ -548,6 +595,8 @@ def test_noninteractive_configuration_is_idempotent_and_redacts_identifiers(
             + first.stderr
             + second.stdout
             + second.stderr
+            + null_parameters.stdout
+            + null_parameters.stderr
             + what_if.stdout
             + what_if.stderr
             + azure_mismatch.stdout

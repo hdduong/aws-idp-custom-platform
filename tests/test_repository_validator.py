@@ -1149,6 +1149,7 @@ def test_environment_configuration_contract_rejects_safety_regressions() -> None
             "# cleanup removed",
             1,
         ),
+        configurator.replace("([string]$AwsProfile).Trim()", "$AwsProfile.Trim()", 1),
         configurator + '\nWrite-Host "AWS identity: unsafe"\n',
     )
     for mutation in mutations:
