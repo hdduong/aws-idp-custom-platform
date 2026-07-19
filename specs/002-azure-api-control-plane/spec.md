@@ -87,6 +87,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 14. **Given** an older stack already owns generated retained table or bucket resources, **When** deterministic naming would require replacement, **Then** the stateful stack policy blocks automatic replacement and the operator must use a separately reviewed migration or import procedure.
 15. **Given** SAM packages a platform Lambda under the environment-specific artifact prefix, **When** CloudFormation creates the function, **Then** its execution role can read only that artifact prefix and decrypt only the bootstrap artifact key.
 16. **Given** document-data and deployment-artifact keys share the application and environment tags, **When** the platform execution role evaluates broad document-key lifecycle operations, **Then** the distinct `KeyPurpose` condition excludes the deployment artifact key.
+17. **Given** the platform template declares a DynamoDB stream filter, **When** repository validation runs before packaging, **Then** malformed JSON, duplicate keys, non-object patterns, added OR filters, and drift from the exact `UPLOAD`/`VALIDATING` event contract are rejected.
 
 ### Edge Cases
 
@@ -140,6 +141,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 - **FR-034**: Deterministic table and bucket naming is a first-install contract; an existing generated retained resource MUST NOT be auto-replaced, and migration or import MUST be a separate reviewed operation protected by the stateful stack policy.
 - **FR-035**: The platform CloudFormation execution role MUST read packaged Lambda code only from `${ArtifactBucket.Arn}/platform/${EnvironmentName}/*`, using only `s3:GetObject`, and MUST decrypt only `ArtifactKey` through regional S3 with the exact artifact-bucket encryption context; list, version, write, cross-environment, and wildcard artifact access are prohibited.
 - **FR-036**: Platform document-data keys MUST carry `KeyPurpose=document-data`, bootstrap artifact keys MUST carry `KeyPurpose=deployment-artifacts`, and every create/manage document-key grant MUST require the corresponding purpose tag so `kms:*` document lifecycle access cannot match the artifact key.
+- **FR-037**: Every Lambda event-source filter in the platform template MUST be a literal, syntactically valid JSON object with unique keys before packaging; the upload-completion mapping MUST match only DynamoDB `INSERT` or `MODIFY` records whose new image is an `UPLOAD` in `VALIDATING` status.
 
 ### Key Entities
 
@@ -177,6 +179,7 @@ An operator provisions and deploys the Azure API, its managed workload identity,
 - **SC-020**: Structured IAM validation accepts exactly one environment-scoped `s3:GetObject` deployment-artifact statement and one artifact-key decrypt statement constrained to regional S3 and the bucket-key encryption context, rejecting added actions, wider prefixes, wildcard keys/contexts, duplicates, and relocated grants.
 - **SC-021**: Mutation tests prove that changing either key-purpose tag or removing/broadening either request/resource purpose condition fails repository validation.
 - **SC-022**: Repository validation proves that SAM packaging uses exactly the bootstrap artifact bucket, `platform/${environment}` prefix, and bootstrap artifact key expected by the execution-role policy.
+- **SC-023**: Structured filter tests reject malformed delimiters, duplicate JSON keys, non-object patterns, and semantic drift from the exact upload-completion DynamoDB event contract before CloudFormation deployment.
 
 ## Assumptions
 

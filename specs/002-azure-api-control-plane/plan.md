@@ -100,6 +100,8 @@ CloudFormation handler stabilization must use the same resource identity modeled
 
 Packaged Lambda code remains in the bootstrap artifact bucket, not the retained document bucket. The packaged function resources carry an S3 key but no object version, so CloudFormation receives only `s3:GetObject` for `${ArtifactBucket.Arn}/platform/${EnvironmentName}/*`; packaging and writes remain with the deployment role. Its `kms:Decrypt` grant names only `ArtifactKey` and additionally requires regional S3 plus the artifact bucket ARN used by S3 Bucket Keys as the encryption context. To prevent the existing purpose-tagged document-key lifecycle statement from also matching the artifact key, `DataKey` and `ArtifactKey` carry distinct `KeyPurpose` values and the create/manage document-key conditions require `document-data`. Structured validation treats the artifact read/decrypt statements and both sides of this tag partition as one cross-template contract.
 
+Lambda validates event-source filter strings only when it creates or updates the mapping, after SAM and CloudFormation static template checks have passed. Repository validation therefore parses every declared mapping filter as JSON with duplicate-key rejection before packaging. It also compares the upload-completion filter structurally to the reviewed contract: DynamoDB `INSERT` or `MODIFY`, new-image `entityType=UPLOAD`, and new-image `status=VALIDATING`. Delimiter errors, non-object patterns, duplicate keys, extra filters, and semantic broadening fail locally and in pull-request validation.
+
 ## Project Structure
 
 ### Documentation (this feature)

@@ -718,7 +718,7 @@ Resources:
       EventSourceArn: !GetAtt RegistryTable.StreamArn
       FilterCriteria:
         Filters:
-          - Pattern: '{"eventName":["INSERT","MODIFY"],"dynamodb":{"NewImage":{"entityType":{"S":["UPLOAD"]},"status":{"S":["VALIDATING"]}}}}}'
+          - Pattern: '{"eventName":["INSERT","MODIFY"],"dynamodb":{"NewImage":{"entityType":{"S":["UPLOAD"]},"status":{"S":["VALIDATING"]}}}}'
       FunctionName: !Ref UploadProcessorFunction
       FunctionResponseTypes:
         - ReportBatchItemFailures

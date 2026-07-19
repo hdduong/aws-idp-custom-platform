@@ -50,6 +50,8 @@ az bicep build --file ./infra/azure/main.bicep --stdout | Out-Null
 
 The coverage command must report at least 80% lines for every hand-authored Python service file and for the combined service suite. A passing aggregate may not hide an individual file below 80%.
 
+Repository validation also parses every Lambda event-source filter as JSON with duplicate-key rejection and verifies the exact DynamoDB upload-completion event contract. Do not rely on `sam validate` or `cfn-lint` alone: Lambda otherwise rejects malformed filter strings only during event-source-mapping creation.
+
 On an HTTPS-inspected workstation, pass the administrator-approved root CA to
 the container build as an ephemeral BuildKit secret, for example
 `--secret id=enterprise_ca,src=<ignored-local-ca.pem>`. The Dockerfile uses it

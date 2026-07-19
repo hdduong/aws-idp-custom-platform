@@ -384,6 +384,119 @@ def validate_serverless_transform_execution_roles(template_text: str) -> None:
     )
 
 
+def validate_platform_event_source_filters(template_text: str) -> None:
+    """Require deployable JSON and the exact upload-completion stream filter."""
+
+    try:
+        template = yaml.load(template_text, Loader=CloudFormationSafeLoader)
+    except yaml.YAMLError as exc:
+        raise ValueError("AWS platform template must be valid CloudFormation YAML.") from exc
+
+    require(isinstance(template, dict), "AWS platform template must be a mapping.")
+    resources = template.get("Resources")
+    require(isinstance(resources, dict), "AWS platform template must declare Resources.")
+
+    parsed_filters: dict[str, list[dict[str, Any]]] = {}
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key: {key}")
+            result[key] = value
+        return result
+
+    def reject_nonstandard_constant(_constant: str) -> None:
+        raise ValueError("non-standard JSON constant")
+
+    def parse_filter_criteria(logical_path: str, criteria: Any) -> list[dict[str, Any]]:
+        filters = criteria.get("Filters") if isinstance(criteria, dict) else None
+        require(
+            isinstance(criteria, dict)
+            and set(criteria) == {"Filters"}
+            and isinstance(filters, list)
+            and 1 <= len(filters) <= 5,
+            f"{logical_path} FilterCriteria must contain between one and five Filters.",
+        )
+        parsed: list[dict[str, Any]] = []
+        for filter_definition in filters:
+            pattern = (
+                filter_definition.get("Pattern")
+                if isinstance(filter_definition, dict)
+                else None
+            )
+            require(
+                isinstance(filter_definition, dict)
+                and set(filter_definition) == {"Pattern"}
+                and isinstance(pattern, str),
+                f"{logical_path} filters must contain one literal Pattern string.",
+            )
+            try:
+                parsed_pattern = json.loads(
+                    pattern,
+                    object_pairs_hook=reject_duplicate_keys,
+                    parse_constant=reject_nonstandard_constant,
+                )
+            except (json.JSONDecodeError, ValueError) as exc:
+                raise ValueError(
+                    f"{logical_path} filter Pattern must be valid JSON with unique object keys."
+                ) from exc
+            require(
+                isinstance(parsed_pattern, dict),
+                f"{logical_path} filter Pattern must decode to a JSON object.",
+            )
+            parsed.append(parsed_pattern)
+        return parsed
+
+    for logical_id, resource in resources.items():
+        if not isinstance(resource, dict):
+            continue
+        properties = resource.get("Properties")
+        if not isinstance(properties, dict):
+            continue
+        if resource.get("Type") == "AWS::Lambda::EventSourceMapping":
+            criteria = properties.get("FilterCriteria")
+            if criteria is not None:
+                parsed_filters[logical_id] = parse_filter_criteria(logical_id, criteria)
+        if resource.get("Type") != "AWS::Serverless::Function" or "Events" not in properties:
+            continue
+        events = properties.get("Events")
+        require(
+            isinstance(events, dict),
+            f"{logical_id} SAM Events must use literal event definitions.",
+        )
+        for event_id, event_definition in events.items():
+            event_properties = (
+                event_definition.get("Properties")
+                if isinstance(event_definition, dict)
+                else None
+            )
+            criteria = (
+                event_properties.get("FilterCriteria")
+                if isinstance(event_properties, dict)
+                else None
+            )
+            if criteria is not None:
+                logical_path = f"{logical_id}.Events.{event_id}"
+                parsed_filters[logical_path] = parse_filter_criteria(
+                    logical_path, criteria
+                )
+
+    expected_upload_filter = {
+        "eventName": ["INSERT", "MODIFY"],
+        "dynamodb": {
+            "NewImage": {
+                "entityType": {"S": ["UPLOAD"]},
+                "status": {"S": ["VALIDATING"]},
+            }
+        },
+    }
+    require(
+        parsed_filters.get("UploadCompletionStreamMapping") == [expected_upload_filter],
+        "UploadCompletionStreamMapping must keep the exact INSERT/MODIFY UPLOAD VALIDATING filter.",
+    )
+
+
 def validate_platform_cloudformation_handler_contract(
     api_template_text: str, bootstrap_template_text: str
 ) -> None:
@@ -1240,6 +1353,7 @@ def validate_azure_control_plane() -> None:
         aws_template.count("PermissionsBoundary: !Ref RolePermissionsBoundaryArn") == 5,
         "Every platform-created IAM role must use the bootstrap permissions boundary.",
     )
+    validate_platform_event_source_filters(aws_template)
 
     bootstrap_template = (ROOT / "infra" / "bootstrap" / "template.yaml").read_text(encoding="utf-8")
     for required_fragment in (
