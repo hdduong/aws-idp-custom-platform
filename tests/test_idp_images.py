@@ -132,6 +132,23 @@ def test_lock_checksum_is_validated_only_when_recorded() -> None:
         idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
 
 
+def test_pr_workflow_applies_reviewed_overlay_before_build() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "build-idp-images.yml").read_text(
+        encoding="utf-8"
+    )
+    pr_job = workflow.split("  build-pr:", maxsplit=1)[1].split(
+        "  publish-manifest:", maxsplit=1
+    )[0]
+
+    check = "apply --check --whitespace=error-all"
+    apply = "apply --whitespace=error-all"
+    build = "uses: docker/build-push-action@"
+    assert check in pr_job
+    assert apply in pr_job
+    assert pr_job.index(check) < pr_job.index(apply) < pr_job.index(build)
+    assert "External-image overlay touched unexpected files" in pr_job
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

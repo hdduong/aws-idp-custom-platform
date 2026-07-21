@@ -363,6 +363,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & git -C .idp-source apply --check --whitespace=error-all (Join-Path $env:GITHUB_WORKSPACE $lock.externalImageOverlay.path)
           if ($LASTEXITCODE -ne 0) { throw 'The reviewed external-image overlay no longer applies.' }
+          & git -C .idp-source apply --whitespace=error-all (Join-Path $env:GITHUB_WORKSPACE $lock.externalImageOverlay.path)
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to apply the reviewed external-image overlay.' }
+          $changed = @(& git -C .idp-source diff --name-only --) | Sort-Object
+          $expected = @(
+            'Dockerfile.optimized',
+            'patterns/unified/template.yaml',
+            'src/ui/package.json',
+            'template.yaml'
+          ) | Sort-Object
+          if (($changed -join "`n") -cne ($expected -join "`n")) {
+            throw "External-image overlay touched unexpected files: $($changed -join ', ')."
+          }
       - name: Set up pinned QEMU emulation
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
         with:
