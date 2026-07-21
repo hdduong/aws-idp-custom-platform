@@ -241,7 +241,6 @@ jobs:
             throw 'The pushed image is not a single Linux ARM64 image.'
           }
           "media_type=$mediaType" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "completed_at=$([DateTimeOffset]::UtcNow.ToString('o'))" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Scan digest and generate CycloneDX SBOM
         shell: pwsh
@@ -281,7 +280,6 @@ jobs:
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
           MEDIA_TYPE: ${{ steps.inspect.outputs.media_type }}
-          SCAN_COMPLETED_AT: ${{ steps.inspect.outputs.completed_at }}
           PROVENANCE_URL: ${{ steps.provenance.outputs.attestation-url }}
           SBOM_URL: ${{ steps.sbom.outputs.attestation-url }}
           PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
@@ -293,6 +291,7 @@ jobs:
           [IO.Directory]::CreateDirectory($attestationDirectory) | Out-Null
           Copy-Item -LiteralPath $env:PROVENANCE_BUNDLE -Destination (Join-Path $attestationDirectory '${{ matrix.logicalName }}-provenance.jsonl')
           Copy-Item -LiteralPath $env:SBOM_BUNDLE -Destination (Join-Path $attestationDirectory '${{ matrix.logicalName }}-sbom.jsonl')
+          $scanCompletedAt = [DateTimeOffset]::UtcNow.ToString('o')
           $arguments = @(
             '-m', 'tooling.idp_images', 'write-fragment',
             '--contract', 'config/idp/images.json',
@@ -305,7 +304,7 @@ jobs:
             '--media-type', $env:MEDIA_TYPE,
             '--scanner-version', '0.72.0',
             '--scan-report', ".release/scan/${{ matrix.logicalName }}.json",
-            '--scan-completed-at', $env:SCAN_COMPLETED_AT,
+            '--scan-completed-at', $scanCompletedAt,
             '--provenance-url', $env:PROVENANCE_URL,
             '--provenance-predicate-type', 'https://slsa.dev/provenance/v1',
             '--sbom', ".release/sbom/${{ matrix.logicalName }}.cdx.json",

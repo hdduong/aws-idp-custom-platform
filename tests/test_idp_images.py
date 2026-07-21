@@ -165,6 +165,20 @@ def test_pr_workflow_applies_reviewed_overlay_before_build() -> None:
     assert "External-image overlay touched unexpected files" in pr_job
 
 
+def test_release_fragment_records_timestamp_after_scan() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "build-idp-images.yml").read_text(
+        encoding="utf-8"
+    )
+    scan = workflow.index("- name: Scan digest and generate CycloneDX SBOM")
+    fragment = workflow.index("- name: Write checked image evidence fragment")
+    fragment_body = workflow[fragment : workflow.index("- name: Upload immutable per-image evidence")]
+
+    assert scan < fragment
+    assert "steps.inspect.outputs.completed_at" not in workflow
+    assert "$scanCompletedAt = [DateTimeOffset]::UtcNow.ToString('o')" in fragment_body
+    assert "'--scan-completed-at', $scanCompletedAt" in fragment_body
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [
