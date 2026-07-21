@@ -122,6 +122,16 @@ def test_overlay_uses_cross_platform_vite_entrypoint() -> None:
     assert "+    \"build\": " in overlay
 
 
+def test_lock_checksum_is_validated_only_when_recorded() -> None:
+    _, lock, _ = load_inputs()
+
+    idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
+    lock["externalImageOverlay"]["lockSha256"] = "0" * 64
+
+    with pytest.raises(idp_images.ImageContractError, match="lock checksum"):
+        idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

@@ -94,7 +94,8 @@ def validate_lock(lock: dict[str, Any], lock_path: Path, contract_path: Path) ->
         raise ImageContractError("external image overlay checksum does not match lock")
     if normalized_text_sha256(contract_path) != overlay.get("imageContractSha256"):
         raise ImageContractError("image contract checksum does not match lock")
-    if normalized_text_sha256(lock_path) != overlay.get("lockSha256", normalized_text_sha256(lock_path)):
+    recorded_lock_sha256 = overlay.get("lockSha256")
+    if recorded_lock_sha256 is not None and normalized_text_sha256(lock_path) != recorded_lock_sha256:
         raise ImageContractError("lock checksum does not match its recorded release evidence")
 
 
