@@ -1103,12 +1103,16 @@ def validate_idp_python_toolchain_contract(
     ):
         require(fragment in deploy_script, f"Pinned IDP Python gate lacks: {fragment}")
     legacy_command_fragment = "foreach ($command in 'aws', 'git', 'sam', 'docker', 'node', 'npm')"
+    github_image_command_fragment = "foreach ($command in 'aws', 'git', 'sam', 'node', 'npm')"
     if "ImageManifestFile" in deploy_script:
         require(legacy_command_fragment not in deploy_script, "IDP deployment must not require Docker for GitHub-built images.")
+        require(
+            github_image_command_fragment in deploy_script,
+            "Manifest-driven IDP deployment lacks its command preflight.",
+        )
     else:
         require(
-            "foreach ($command in 'aws', 'git', 'sam', 'node', 'npm')" in deploy_script
-            or legacy_command_fragment in deploy_script,
+            github_image_command_fragment in deploy_script or legacy_command_fragment in deploy_script,
             "Pinned IDP Python gate lacks its command preflight.",
         )
     require(

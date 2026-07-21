@@ -104,9 +104,7 @@ def validate(manifest: dict, contract: dict, lock: dict, schema: dict, **expecte
 
 def test_contract_matches_pinned_upstream_and_exact_inventory() -> None:
     contract, lock, _ = load_inputs()
-    indexed = idp_images.validate_contract(
-        contract, lock, ROOT / ".local" / "vendor" / "idp-0.5.16"
-    )
+    indexed = idp_images.validate_contract(contract, lock)
     idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
 
     assert set(indexed) == idp_images.EXPECTED_IMAGE_NAMES

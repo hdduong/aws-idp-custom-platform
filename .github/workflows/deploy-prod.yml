@@ -219,6 +219,9 @@ jobs:
           $directory = Join-Path $env:GITHUB_WORKSPACE '.local'
           [IO.Directory]::CreateDirectory($directory) | Out-Null
           $path = Join-Path $directory 'idp-image-release.json'
+          if ($env:IDP_MANIFEST_S3_KEY -cnotmatch '^idp-images/prod/releases/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/manifest\.json$') {
+            throw 'IDP image manifest key must be a protected production release manifest path.'
+          }
           aws s3 cp "s3://$($env:AWS_ARTIFACT_BUCKET)/$($env:IDP_MANIFEST_S3_KEY)" $path --no-cli-pager
           if ($LASTEXITCODE -ne 0) { throw 'Failed to download the selected IDP image manifest.' }
           $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()

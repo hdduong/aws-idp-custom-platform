@@ -22,6 +22,10 @@ function Invoke-Checked {
 
 $config = Read-EnvironmentConfig -Path $EnvironmentFile
 $root = Get-ProjectRoot
+$platformCommit = (& git -C $root rev-parse HEAD | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $platformCommit -cnotmatch '^[0-9a-f]{40}$') {
+    throw 'Could not resolve the reviewed platform commit for image-release validation.'
+}
 $lockPath = Join-Path $root 'vendor/idp.lock.json'
 $lock = Get-Content -Raw -LiteralPath $lockPath | ConvertFrom-Json -Depth 10
 $manifest = Get-Content -Raw -LiteralPath (Join-Path $root 'config/idp/manifest.json') | ConvertFrom-Json -Depth 10
@@ -95,8 +99,6 @@ function Invoke-ImageReleaseValidation {
     }
 }
 
-# Validate schema, source lock, inventory, scans, and attestations before any cloud call.
-Invoke-ImageReleaseValidation
 $windowsCliBridge = $null
 if ($IsWindows) {
     $samCommandSource = Resolve-CommandSourceOutsidePath -Name sam -ExcludedDirectory $venvExecutableDirectory
@@ -132,6 +134,7 @@ Invoke-ImageReleaseValidation -AdditionalArguments @(
     '--account', [string]$config.awsAccountId,
     '--region', [string]$config.awsRegion,
     '--repository-uri', [string]$bootstrap.IdpImageRepositoryUri,
+    '--platform-commit', $platformCommit,
     '--parameters-output', $imageParametersPath
 )
 $imageRelease = Get-Content -Raw -LiteralPath $resolvedImageManifestPath | ConvertFrom-Json -Depth 30
