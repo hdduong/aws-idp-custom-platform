@@ -132,6 +132,22 @@ def test_lock_checksum_is_validated_only_when_recorded() -> None:
         idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("path", "../../etc/passwd", "overlay path"),
+        ("path", "/etc/passwd", "overlay path"),
+        ("imageContractPath", "../images.json", "contract path"),
+    ],
+)
+def test_lock_rejects_unreviewed_repository_paths(field: str, value: str, message: str) -> None:
+    _, lock, _ = load_inputs()
+    lock["externalImageOverlay"][field] = value
+
+    with pytest.raises(idp_images.ImageContractError, match=message):
+        idp_images.validate_lock(lock, LOCK_PATH, CONTRACT_PATH)
+
+
 def test_pr_workflow_applies_reviewed_overlay_before_build() -> None:
     workflow = (ROOT / ".github" / "workflows" / "build-idp-images.yml").read_text(
         encoding="utf-8"

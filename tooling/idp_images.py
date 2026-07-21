@@ -89,7 +89,11 @@ def validate_lock(lock: dict[str, Any], lock_path: Path, contract_path: Path) ->
     overlay = lock.get("externalImageOverlay")
     if not isinstance(overlay, dict):
         raise ImageContractError("IDP lock must pin externalImageOverlay")
-    overlay_path = ROOT / str(overlay.get("path", ""))
+    if overlay.get("path") != "vendor/patches/idp-v0.5.16-external-images.patch":
+        raise ImageContractError("external image overlay path is not the reviewed repository path")
+    if overlay.get("imageContractPath") != "config/idp/images.json":
+        raise ImageContractError("image contract path is not the reviewed repository path")
+    overlay_path = ROOT / overlay["path"]
     if normalized_text_sha256(overlay_path) != overlay.get("sha256"):
         raise ImageContractError("external image overlay checksum does not match lock")
     if normalized_text_sha256(contract_path) != overlay.get("imageContractSha256"):
