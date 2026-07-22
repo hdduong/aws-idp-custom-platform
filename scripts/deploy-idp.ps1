@@ -53,7 +53,7 @@ if ([string]$lock.cliPythonVersion -cne '3.12') {
 }
 $reviewedBuildTools = @{
     cfnLint = '1.53.0'
-    ruff = '0.15.21'
+    ruff = '0.15.22'
     uv = '0.9.6'
 }
 foreach ($name in $reviewedBuildTools.Keys) {
