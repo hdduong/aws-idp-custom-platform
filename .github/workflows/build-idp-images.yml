@@ -292,6 +292,11 @@ jobs:
           Copy-Item -LiteralPath $env:PROVENANCE_BUNDLE -Destination (Join-Path $attestationDirectory '${{ matrix.logicalName }}-provenance.jsonl')
           Copy-Item -LiteralPath $env:SBOM_BUNDLE -Destination (Join-Path $attestationDirectory '${{ matrix.logicalName }}-sbom.jsonl')
           $scanCompletedAt = [DateTimeOffset]::UtcNow.ToString('o')
+          $scannerVersionLine = (& trivy --version | Select-Object -First 1 | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $scannerVersionLine -cnotmatch '^Version: (?<version>[0-9]+\.[0-9]+\.[0-9]+)$') {
+            throw "Could not determine the Trivy scanner version from '$scannerVersionLine'."
+          }
+          $scannerVersion = $Matches['version']
           $arguments = @(
             '-m', 'tooling.idp_images', 'write-fragment',
             '--contract', 'config/idp/images.json',
@@ -302,7 +307,7 @@ jobs:
             '--tag', $env:IMAGE_TAG,
             '--digest', $env:IMAGE_DIGEST,
             '--media-type', $env:MEDIA_TYPE,
-            '--scanner-version', '0.72.0',
+            '--scanner-version', $scannerVersion,
             '--scan-report', ".release/scan/${{ matrix.logicalName }}.json",
             '--scan-completed-at', $scanCompletedAt,
             '--provenance-url', $env:PROVENANCE_URL,

@@ -179,6 +179,19 @@ def test_release_fragment_records_timestamp_after_scan() -> None:
     assert "'--scan-completed-at', $scanCompletedAt" in fragment_body
 
 
+def test_release_fragment_records_actual_scanner_version() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "build-idp-images.yml").read_text(
+        encoding="utf-8"
+    )
+    fragment = workflow.index("- name: Write checked image evidence fragment")
+    fragment_body = workflow[fragment : workflow.index("- name: Upload immutable per-image evidence")]
+
+    assert "(& trivy --version | Select-Object -First 1 | Out-String).Trim()" in fragment_body
+    assert "$scannerVersion = $Matches['version']" in fragment_body
+    assert "'--scanner-version', $scannerVersion" in fragment_body
+    assert "'--scanner-version', '0.72.0'" not in workflow
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

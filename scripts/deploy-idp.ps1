@@ -63,6 +63,17 @@ foreach ($name in $reviewedBuildTools.Keys) {
 }
 $pythonRuntimeTag = ([string]$lock.cliPythonVersion).Replace('.', '')
 $platformPython = Resolve-PythonLaunch -Version '3.13'
+$manifestDependencyArguments = @($platformPython.PrefixArguments) + @(
+    '-c',
+    'import importlib.metadata; assert importlib.metadata.version("jsonschema") == "4.26.0"'
+)
+& $platformPython.FilePath @manifestDependencyArguments 2>$null
+if ($LASTEXITCODE -ne 0) {
+    throw (
+        'Platform Python 3.13 requires jsonschema 4.26.0 for IDP image manifest validation. ' +
+        'Install the pinned repository dependencies from requirements-dev.txt before deployment.'
+    )
+}
 $venvDirectory = Join-Path $root ".local/tools/idp-cli-$($lock.version)-py$pythonRuntimeTag"
 $venvExecutableDirectory = if ($IsWindows) {
     Join-Path $venvDirectory 'Scripts'
