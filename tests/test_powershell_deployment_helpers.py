@@ -471,8 +471,11 @@ def test_idp_cli_toolchain_keeps_python_runtimes_split() -> None:
         "ruff": "0.15.21",
         "uv": "0.9.6",
     }
-    assert "foreach ($command in 'aws', 'git', 'sam', 'docker', 'node', 'npm')" in deploy
+    assert "foreach ($command in 'aws', 'git', 'sam', 'node', 'npm')" in deploy
+    assert "foreach ($command in 'aws', 'git', 'sam', 'docker'" not in deploy
     assert "foreach ($command in 'aws', 'git', 'python'," not in deploy
+    assert 'importlib.metadata.version("jsonschema") == "4.26.0"' in deploy
+    assert "Platform Python 3.13 requires jsonschema 4.26.0" in deploy
     assert '.local/tools/idp-cli-$($lock.version)-py$pythonRuntimeTag' in deploy
     assert "lib/idp_common_pkg')[all]" in deploy
     assert "Invoke-WithPrependedPath" in deploy
