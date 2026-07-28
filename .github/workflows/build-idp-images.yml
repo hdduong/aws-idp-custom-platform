@@ -185,7 +185,7 @@ jobs:
 
       - name: Build and push immutable ARM64 image
         id: build
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.18.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v6.18.0
         with:
           context: .idp-source
           file: .idp-source/Dockerfile.optimized
@@ -391,7 +391,7 @@ jobs:
           driver-opts: image=moby/buildkit@sha256:2f5adac4ecd194d9f8c10b7b5d7bceb5186853db1b26e5abd3a657af0b7e26ec
           install: true
       - name: Build without registry credentials
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .idp-source
           file: .idp-source/Dockerfile.optimized
