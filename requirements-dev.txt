@@ -2,7 +2,7 @@ boto3==1.43.52
 azure-identity==1.25.3
 cfn-lint==1.53.1
 coverage==7.15.2
-fastapi==0.139.2
+fastapi==0.140.7
 httpx2==2.7.0
 jsonschema==4.26.0
 openapi-spec-validator==0.9.0
